@@ -1,0 +1,12 @@
+[project]
+name = "iris-geohazard"
+version = "0.1.0"
+description = "IRIS TASK 090: Hesse mining, cavity and contaminated-land restriction harvester (HLNUG) into PostGIS staging"
+requires-python = ">=3.15"
+
+[tool.setuptools.packages.find]
+include = ["geohazard*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["db: requires a reachable PostGIS database"]
