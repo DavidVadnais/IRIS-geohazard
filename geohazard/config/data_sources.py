@@ -119,7 +119,7 @@ DATA_SOURCES: dict[str, DataSource] = {
     ),
     "hlnug_geogefahren_erdfaelle": DataSource(
         key="hlnug_geogefahren_erdfaelle",
-        source="hlnug",
+        source="hlnug:geologie/geogefahren/20",
         kind=SourceKind.ARCGIS_REST,
         mode=HarvestMode.LIVE,
         url="https://geodienste-umwelt.hessen.de/arcgis/rest/services/geologie/geogefahren/MapServer",
@@ -138,7 +138,7 @@ DATA_SOURCES: dict[str, DataSource] = {
     ),
     "hlnug_rohstoffe_abbaustellen": DataSource(
         key="hlnug_rohstoffe_abbaustellen",
-        source="hlnug",
+        source="hlnug:geologie/rohstoffe/1",
         kind=SourceKind.ARCGIS_REST,
         mode=HarvestMode.LIVE,
         url="https://geodienste-umwelt.hessen.de/arcgis/rest/services/geologie/rohstoffe/MapServer",
