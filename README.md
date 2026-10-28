@@ -55,6 +55,15 @@ IRIS TASK 090: a harvester for Hesse (Hessen) mine rights, shafts, cavities/cave
 Requirements: Docker with Compose and internet access (the live HLNUG layers, the state boundaries and the map tiles are
 fetched online). Everything runs in containers (Python 3.15), so nothing needs to be installed on the host.
 
+**Guided demo:** `./demo_of_codebase.sh` does all of the steps below in one go, pausing before each one. For every
+step it prints the task requirement being checked, runs the real commands and queries, and marks each check ✔ or ✘. It
+ends by building and opening the map. Options:
+- `--fresh` wipes the database volume first, so the first harvest shows every insert. It asks you to type "yes".
+- `--yes` runs without pauses. Combined with `--fresh`, it also skips the confirmation and wipes without asking.
+- `--no-open` builds the map without opening a browser.
+
+It creates `.env` with a random password if there is none, and exits 1 if any check fails.
+
 **1. Configure.** Copy the env template and set one password, used twice:
 
 ```bash
@@ -109,8 +118,9 @@ docker compose exec -T db sh -c 'psql -X -U "$POSTGRES_USER" -d "$POSTGRES_DB"' 
 | Example + validation SQL | `docker compose exec -T db sh -c 'psql -X -U "$POSTGRES_USER" -d "$POSTGRES_DB"' < sql/examples.sql` |
 | Migrations only | `docker compose run --rm harvester "alembic upgrade head"` |
 | Stop / wipe | `docker compose down` / `docker compose down -v` |
-| Lint and format check | `ruff check && ruff format --check` (ruff 0.16.7, pinned in `pyproject.toml`) |
-| Enable the pre-commit hook (once per clone) | `pre-commit install`; commits are then blocked until `ruff check` and `ruff format --check` pass |
+| Python lint and format check | `pre-commit run --all-files` (ruff check and ruff format, pinned in `.pre-commit-config.yaml`) |
+| Shell script checks (CI only, optional locally) | `shellcheck demo_of_codebase.sh && shfmt -d demo_of_codebase.sh` (CI uses shellcheck 0.11.0 and shfmt 3.14.1; style from `.editorconfig`) |
+| Enable the pre-commit hook (once per clone) | `pre-commit install`; commits are then blocked until ruff check and ruff format pass |
 
 - **Exit codes:** the runner exits `0` when every source succeeds and `1` when any source fails. A failed source is recorded as
   `status = 'failed'` with its error in `harvest_runs`, and nothing from it is loaded.
@@ -409,6 +419,7 @@ geohazard/
 migrations/                 alembic env + 0001_create_iris_staging
 fixtures/hlnug_demo/        synthetic WFS (capabilities, DescribeFeatureType, GetFeature)
 tests/                      unit, loader and end-to-end tests; fixtures/wfs, fixtures/arcgis
+demo_of_codebase.sh         guided walkthrough: each requirement, its evidence, then the map
 sql/examples.sql            example + validation queries
 visualize/make_map.py       interactive map of German states + iris_staging layers (folium)
 visualize/example_parcels.geojson
