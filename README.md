@@ -293,27 +293,40 @@ RETURNING (xmax = 0) AS inserted
 [`sql/examples.sql`](sql/examples.sql) contains the parcel-overlap and proximity examples and nine validation checks. The
 captured output is in [`docs/validation_output.txt`](docs/validation_output.txt).
 
+The parcel examples use **real Hesse cadastral parcels**. They come from the HVBG
+[INSPIRE-WFS HE Flurstücke/Grundstücke ALKIS](https://inspire-hessen.de/ows/services/org.2.07247d95-adc7-4c7d-9c7a-ed17af855317_wfs?SERVICE=WFS&REQUEST=GetCapabilities&VERSION=2.0.0)
+(`cp:CadastralParcel`, dl-de/zero-2.0, no access restrictions), fetched on 2026-10-28. They are embedded in the script
+as psql variables (`:'parcel_297'`, `:'parcel_10_5'`), so the examples write nothing to the database.
+- **Flurstück 297** (`06216400600297`, about 9.85°E 51.07°N in northeast Hesse, 35 mapped sinkholes inside it) was requested as GML in EPSG:25832.
+- **Flurstück 10/5** (`061610001000100005`, at the Würmersen sandstone quarry) was requested as GeoJSON. That comes back
+  in lon/lat (RFC 7946) whatever `srsName` asks for, so it is read as EPSG:4258 and transformed.
+
 ```sql
 -- parcel overlap (parcel in any CRS -> transform to 25832 so the GIST index is used)
 SELECT r.source_feature_id, r.restriction_category, r.classification_status, r.source_url
 FROM iris_staging.mining_restrictions r
-WHERE ST_Intersects(r.geom, ST_Transform(:parcel_geom, 25832));
+WHERE ST_Intersects(r.geom, ST_Transform(ST_GeomFromText(:'parcel_10_5', 4258), 25832));
 
 -- proximity in metres (EPSG:25832 is metric)
-SELECT r.source_feature_id, round(ST_Distance(r.geom, s.geom)) AS distance_m
+SELECT r.restriction_category, count(*) AS n
 FROM iris_staging.mining_restrictions r,
-     (SELECT ST_SetSRID(ST_MakePoint(534150, 5685100), 25832) AS geom) s
-WHERE ST_DWithin(r.geom, s.geom, 250)
-ORDER BY distance_m;
+     (SELECT ST_GeomFromText(:'parcel_297', 25832) AS geom) p
+WHERE ST_DWithin(r.geom, p.geom, 250) AND NOT ST_Intersects(r.geom, p.geom)
+GROUP BY 1;
 ```
 
 Excerpt of the output:
 
 ```
-== 3. Proximity: restrictions within 250 m of a site (EPSG:25832 units are metres)
-   source   | source_feature_id | restriction_category | hazard_classification | classification_status | distance_m
-------------+-------------------+----------------------+-----------------------+-----------------------+------------
- hlnug_demo | S-0001            | shaft                | hoch                  | published             |      180.3
+== 2. Parcel overlap: real ALKIS parcel delivered in EPSG:4258 lon/lat, transformed to 25832 before the GIST-indexed test (Flurstück 10/5)
+           source           | source_feature_id | restriction_category |         site_name          | extraction_type | classification_status | parcel_m2
+----------------------------+-------------------+----------------------+----------------------------+-----------------+-----------------------+-----------
+ hlnug:geologie/rohstoffe/1 | 1                 | extraction_site      | Sandsteintagebau Würmersen | Trockenabbau    | missing               |     20352
+
+== 3. Proximity: restrictions within 250 m of the Flurstück 297 boundary but outside it (EPSG:25832 units are metres)
+ restriction_category | n  | nearest_m | farthest_m
+----------------------+----+-----------+------------
+ sinkhole_subsidence  | 65 |       0.6 |      248.0
 
 == V2. Geometry integrity (expect all zeros)
  invalid | empty | wrong_srid | outside_hesse_bbox | repaired_kept
@@ -337,6 +350,11 @@ xdg-open visualize/output/hesse_restrictions_map.html     # or open the file in 
   its per-feature source URL. A missing classification is shown as **MISSING (not published, not safe)**.
 - **Layers:** each category is its own toggle, with counts, and synthetic layers are labelled as synthetic. A hidden-by-default
   layer shows the rejected records of the latest run that still have a geometry (e.g. the out-of-region and unrepairable ones).
+- **Example parcels:** a second hidden-by-default layer, "ALKIS example parcels", draws the two real HVBG parcels used in
+  `sql/examples.sql` (Flurstück 297 and 10/5) as magenta outlines, with Flurstück number, cadastral reference, official
+  area and license in the popup. They come from `visualize/example_parcels.geojson` (committed, generated from the SQL
+  variables so both use identical geometry); `--parcels <file>` draws a different GeoJSON instead. They are drawn only
+  on the map and are not written to the database.
 - **Sources:**
   - state boundaries: BKG VG2500 WFS (`vg2500:vg2500_lan`, land areas only), cached in `visualize/data/`; `--refresh-states`
     re-downloads them
@@ -362,6 +380,14 @@ xdg-open visualize/output/hesse_restrictions_map.html     # or open the file in 
 
 - **Categories:** no real data exists for the four required categories, because no public source exists (see the notice above).
   The live layers are geohazard and extraction data, not mine rights, shafts or contaminated land.
+- **Old mining (Altbergbau) is only available per parcel, on request:** the Hesse mining authority, RP Darmstadt
+  (Bergaufsicht), gives information on old mining and the risk of mining damage
+  [only on application, for a fee, for one parcel at a time](https://rp-darmstadt.hessen.de/umwelt-und-energie/bergbau/ich-und-mein-haus/altbergbau).
+  The application must include a site plan and a land-register extract (Grundbuchauszug) proving ownership, or the
+  owner's authorisation. The mining authority's own data on shafts, tunnels and cavities therefore can't be harvested;
+  it is released case by case, not published as a dataset or service. The Hesse open-data catalogue
+  (`geoportal.hessen.de/spatial-objects/`, 243 services) also lists no mining, Altbergbau or contaminated-land service
+  (see [docs/source_discovery.md](docs/source_discovery.md) §9).
 - **Classification:** neither live layer publishes a hazard classification, so every live row is `missing`.
 - **Disappeared features:** features removed from the source are not deleted or flagged; there is no `last_seen` tracking yet.
 - **Rejected rows:** these are a per-run log, so the same bad feature appears again in every run.
@@ -385,6 +411,8 @@ fixtures/hlnug_demo/        synthetic WFS (capabilities, DescribeFeatureType, Ge
 tests/                      unit, loader and end-to-end tests; fixtures/wfs, fixtures/arcgis
 sql/examples.sql            example + validation queries
 visualize/make_map.py       interactive map of German states + iris_staging layers (folium)
+visualize/example_parcels.geojson
+                            the two ALKIS parcels from sql/examples.sql, drawn on the map
 docs/                       source_discovery.md, quality_report.md, validation_output.txt, test_output.txt
 requirements.txt, requirements-dev.txt, requirements.lock (all pins), pyproject.toml
 Dockerfile, docker-compose.yml, .env.example, config.example.yaml

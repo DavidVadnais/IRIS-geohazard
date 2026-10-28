@@ -102,3 +102,40 @@ Outcome B, plus a live check:
    their own categories (`sinkhole_subsidence`, `extraction_site`) so they are never mislabelled.
 3. Not used: `haa/haa` (HTTP 403, restricted), the Altflächendatei / FIS AG (not public), and the Bergaufsicht mining
    data (no public service). No access restriction was bypassed.
+
+## 9. Follow-up (2026-10-28): INSPIRE WFS services on the HLNUG host
+
+The `geologie/*` REST services in §6 have no WFS, but the `inspire/*` services on the same host do. All four checked
+return valid WFS 2.0.0 GetCapabilities with `AccessConstraints = noLimitations`, native EPSG:25832, result paging
+(`CountDefault` 20000) and GeoJSON and GML 3.2 output. Base URL:
+`https://geodienste-umwelt.hessen.de/arcgis/services/inspire/<service>/MapServer/WFSServer`.
+
+| Service | Feature types | Content | Fits the task? |
+|---|---|---|---|
+| `geologie` | `inspire_geologie:GUEK300_Geologie`, `GUEK300_Tektonik` | GÜK300 geological units and tectonic lines; `Fees` states CC BY 4.0 explicitly | No: geology, not a restriction |
+| `gebiete_naturbedingter_risiken` | `Hochwasser_mit_{hoher,mittlerer,niedriger}_Wahrscheinlichkeit`, `Ueberschwemmungsgebiete_HQ100_nach_HWG`, `Abflussgebiete_HQ100_nach_HWG` | flood hazard and flood zones (WHG §74/§76) | No: water, not mining |
+| `produktions_industrieanlagen` | `IED_Anlagen` | IED industrial installations (LIS-A) | No: installations, not mine rights or contaminated land |
+| `bewirtschaftungsgebiete` | `TWS_HQS_TK25`, `TWS_HQS_ALK` | drinking-water and spa-spring protection zones | No: water protection |
+
+Not yet checked: `boden`, `ge_core_guek300`, `gewaessernetz`, `lebensraeume_biotope`, `ps`, `schutzgebiete`, `so_bfd50`,
+`umweltueberwachung`. None of their names suggests mining.
+
+The other suggested endpoints (an AI-generated list) did not exist: `gds.hessen.de/wfs2/HVBG_ALKIS_SF` returned 404
+(`image/jpeg`), and `hlug.de/wfs/{geologie,bohrungen,wsg,hwgk}` redirected to `hlnug.de` and returned 403. The 403 is
+identical for a made-up path under `/wfs/`, so it is nginx blocking the prefix, not evidence of a service.
+
+Conclusion unchanged: there is still no public WFS for the four required categories. These services do give a real
+OGC WFS to test the WFS scraper against live.
+
+### 9.1 Further candidates (2026-10-28)
+
+| Candidate | Result |
+|---|---|
+| `inspire-hessen.de/ows/services/org.2.07247d95-adc7-4c7d-9c7a-ed17af855317_wfs` | Real WFS 2.0.0 "INSPIRE-WFS HE Flurstücke/Grundstücke ALKIS" (HVBG). `cp:CadastralParcel`, `cp:CadastralZoning`, default CRS EPSG:4258, dl-de/zero-2.0, `AccessConstraints NONE`, **no result paging** (`ImplementsResultPaging FALSE`, `CountDefault` 25000). Parcels, not restrictions: usable as real test parcels for the overlap queries, not as a source for `mining_restrictions`. |
+| `geoportal.hessen.de/spatial-objects/` (`?f=json`) | Open-data catalogue of **243 services**. A keyword search (berg, schacht, stollen, kavern, altlast, erdfall, rohstoff, abbau, grube, bodenschatz, tagebau and similar) matched 41, all false positives: place names (Petersberg, Bergstraße, Rauschenberg) and zoning plans. **No mining, Altbergbau or Altlasten service is listed.** |
+| `geoportal.hessen.de/spatial-objects/373` | HLNUG `inspire/boden` WFS (BFD5L soil map). Soil, not mining. |
+| RP Darmstadt "Altbergbau" page | Information on old mining is given **only on application, for a fee, per parcel**, with a land-register extract or an owner's authorisation. No public dataset or service. |
+| `verwaltungsportal.hessen.de` ALTIS service page | HTTP 503 "Security Check" (bot protection); not pursued. ALTIS information is likewise an application-based administrative service. |
+
+This confirms §8: mine rights, old-mining shafts and cavities, and contaminated land in Hesse are released per request,
+not as open services.

@@ -1,18 +1,22 @@
 Null display is "<NULL>".
-== 1. Parcel overlap: restrictions intersecting a parcel given in EPSG:25832
-   source   | source_feature_id | restriction_category |       status        |  hazard_classification   | classification_status | overlap_m2 |                                                                 source_url                                                                  
-------------+-------------------+----------------------+---------------------+--------------------------+-----------------------+------------+---------------------------------------------------------------------------------------------------------------------------------------------
- hlnug_demo | A-0001            | contaminated_land    | under_investigation | Keine Gefährdung bekannt | published             |    10000.0 | https://fixture.invalid/hlnug/wfs?service=WFS&version=2.0.0&request=GetFeature&typeNames=hlnug_demo%3Ahe_bergbau_kavernen&resourceId=A-0001
+== Real parcels: HVBG INSPIRE-WFS HE Flurstücke/Grundstücke ALKIS, layer cp:CadastralParcel, dl-de/zero-2.0, fetched 2026-10-28
+   https://inspire-hessen.de/ows/services/org.2.07247d95-adc7-4c7d-9c7a-ed17af855317_wfs
+   parcel_297:  06216400600297, Flurstück 297, GML 3.2 requested with srsName EPSG:25832
+   parcel_10_5: 061610001000100005, Flurstück 10/5, GeoJSON (RFC 7946 lon/lat; the native CRS is EPSG:4258)
+== 1. Parcel overlap: restrictions intersecting a real ALKIS parcel delivered in EPSG:25832 (Flurstück 297)
+            source             | restriction_category | classification_status | n  | parcel_m2 |                                                                                                   feature_ids                                                                                                    
+-------------------------------+----------------------+-----------------------+----+-----------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ hlnug:geologie/geogefahren/20 | sinkhole_subsidence  | missing               | 35 |    130250 | 1001, 1007, 1014, 1015, 1017, 1024, 1026, 1028, 1029, 1031, 1042, 1048, 1052, 1055, 1063, 3714, 3715, 3716, 3717, 3718, 3719, 3817, 3818, 3819, 3820, 3821, 3822, 3823, 3826, 3827, 4446, 4447, 4448, 4449, 4450
 
-== 2. Parcel overlap: parcel delivered in WGS84 (EPSG:4326), transformed to 25832 before the GIST-indexed test
-   source   | source_feature_id | restriction_category | classification_status 
-------------+-------------------+----------------------+-----------------------
- hlnug_demo | S-0001            | shaft                | published
+== 2. Parcel overlap: real ALKIS parcel delivered in EPSG:4258 lon/lat, transformed to 25832 before the GIST-indexed test (Flurstück 10/5)
+           source           | source_feature_id | restriction_category |         site_name          | extraction_type | classification_status | parcel_m2 |                                                                source_url                                                                
+----------------------------+-------------------+----------------------+----------------------------+-----------------+-----------------------+-----------+------------------------------------------------------------------------------------------------------------------------------------------
+ hlnug:geologie/rohstoffe/1 | 1                 | extraction_site      | Sandsteintagebau Würmersen | Trockenabbau    | missing               |     20352 | https://geodienste-umwelt.hessen.de/arcgis/rest/services/geologie/rohstoffe/MapServer/1/query?where=OBJECTID%3D1&outFields=%2A&f=geojson
 
-== 3. Proximity: restrictions within 250 m of a site (EPSG:25832 units are metres)
-   source   | source_feature_id | restriction_category | hazard_classification | classification_status | distance_m 
-------------+-------------------+----------------------+-----------------------+-----------------------+------------
- hlnug_demo | S-0001            | shaft                | hoch                  | published             |      180.3
+== 3. Proximity: restrictions within 250 m of the Flurstück 297 boundary but outside it (EPSG:25832 units are metres)
+ restriction_category | n  | nearest_m | farthest_m 
+----------------------+----+-----------+------------
+ sinkhole_subsidence  | 65 |       0.6 |      248.0
 
 == 4. Proximity: count live sinkholes within 1 km of a site, nearest first (KNN)
  source_feature_id | amt_nr | distance_m 
@@ -20,11 +24,12 @@ Null display is "<NULL>".
  1                 | 2944   |       19.7
 
 == 5. The GIST index is used by ST_DWithin
-                                                         QUERY PLAN                                                          
------------------------------------------------------------------------------------------------------------------------------
- Index Scan using mining_restrictions_geom_gist on mining_restrictions
-   Index Cond: (geom && st_expand('0101000020E864000000000000983E204100000000AACC5541'::geometry, '1000'::double precision))
+                                                            QUERY PLAN                                                             
+-----------------------------------------------------------------------------------------------------------------------------------
+ Bitmap Heap Scan on mining_restrictions
    Filter: st_dwithin(geom, '0101000020E864000000000000983E204100000000AACC5541'::geometry, '1000'::double precision)
+   ->  Bitmap Index Scan on mining_restrictions_geom_gist
+         Index Cond: (geom && st_expand('0101000020E864000000000000983E204100000000AACC5541'::geometry, '1000'::double precision))
 
 == V1. Inventory by source, category and classification status
             source             | restriction_category | classification_status |  n   
@@ -90,6 +95,9 @@ Null display is "<NULL>".
  hlnug_demo                    | fixture | succeeded | 2026-10-28 00:16:56 |      16 |    0 |   0 |   10 |   6 | synthetic fixture data, no license                                        | none (synthetic fixture data)                                                                                         | none (synthetic) | not stated by service
  hlnug:geologie/geogefahren/20 | live    | succeeded | 2026-10-28 00:16:58 |    4691 |    0 |   0 | 4691 |   0 | CC-BY-4.0 (assumed, per HLNUG INSPIRE Nutzungsbedingungen Stand Mai 2025) | noLimitations; keine rechtsverbindliche Auskunft; © Hessisches Landesamt für Naturschutz, Umwelt und Geologie (HLNUG) | <NULL>           | not stated by service
  hlnug:geologie/rohstoffe/1    | live    | succeeded | 2026-10-28 00:17:04 |     276 |    0 |   0 |  276 |   0 | CC-BY-4.0 (assumed, per HLNUG INSPIRE Nutzungsbedingungen Stand Mai 2025) | noLimitations; keine rechtsverbindliche Auskunft; © Hessisches Landesamt für Naturschutz, Umwelt und Geologie (HLNUG) | <NULL>           | not stated by service
+ hlnug_demo                    | fixture | succeeded | 2026-10-28 04:04:11 |      16 |    0 |   0 |   10 |   6 | synthetic fixture data, no license                                        | none (synthetic fixture data)                                                                                         | none (synthetic) | not stated by service
+ hlnug:geologie/geogefahren/20 | live    | succeeded | 2026-10-28 04:04:13 |    4691 |    0 |   0 | 4691 |   0 | CC-BY-4.0 (assumed, per HLNUG INSPIRE Nutzungsbedingungen Stand Mai 2025) | noLimitations; keine rechtsverbindliche Auskunft; © Hessisches Landesamt für Naturschutz, Umwelt und Geologie (HLNUG) | <NULL>           | not stated by service
+ hlnug:geologie/rohstoffe/1    | live    | succeeded | 2026-10-28 04:04:19 |     276 |    0 |   0 |  276 |   0 | CC-BY-4.0 (assumed, per HLNUG INSPIRE Nutzungsbedingungen Stand Mai 2025) | noLimitations; keine rechtsverbindliche Auskunft; © Hessisches Landesamt für Naturschutz, Umwelt und Geologie (HLNUG) | <NULL>           | not stated by service
 
 == V9. Idempotency: the latest run per source changed nothing when the source did not change
             source             | inserted_count | updated_count | unchanged_count 

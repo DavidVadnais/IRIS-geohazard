@@ -97,7 +97,7 @@ Other requirements:
 | Geometry validated, `make_valid` or reject, EPSG:25832 | V2 all 0; DB CHECK `ST_IsValid AND NOT ST_IsEmpty`; column typed `geometry(Geometry,25832)` |
 | Only `iris_staging` written | all tables, including `alembic_version`, are in `iris_staging` (`\dt iris_staging.*`) |
 | GIST index | `mining_restrictions_geom_gist`; example 5 shows a Bitmap Index Scan for `ST_DWithin` |
-| Parcel overlap / proximity SQL | examples 1 to 4: `ST_Intersects` (25832 and WGS84 parcels), `ST_DWithin` 250 m / 1 km |
+| Parcel overlap / proximity SQL | examples 1 to 4 on real HVBG ALKIS parcels: `ST_Intersects` (parcel in EPSG:25832, and in EPSG:4258 transformed), `ST_DWithin` 250 m from a parcel / 1 km from a point |
 | Per-run legal/access/currency/source URL | V8 (`harvest_runs`), plus an INFO log at run start |
 | No secrets in the repo | `.env.example` and `config.example.yaml` have blank or no passwords; compose requires them from `.env` (`:?` guards) |
 | Pinned dependencies | `requirements.txt` / `-dev.txt` (`==`), plus `requirements.lock` (37 packages, verified identical to the image) |

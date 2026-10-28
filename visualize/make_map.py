@@ -21,6 +21,7 @@ logger = logging.getLogger("visualize.make_map")
 HERE = Path(__file__).resolve().parent
 DEFAULT_OUTPUT = HERE / "output" / "hesse_restrictions_map.html"
 DEFAULT_STATES_CACHE = HERE / "data" / "vg2500_lan.geojson"
+DEFAULT_PARCELS = HERE / "example_parcels.geojson"
 DEFAULT_STATE = "Hessen"
 
 STATES_WFS_URL = "https://sgx.geodatenzentrum.de/wfs_vg2500"
@@ -56,6 +57,19 @@ CATEGORY_STYLES = {
     "extraction_site": ("Extraction sites (HLNUG live)", "#1a9641"),
 }
 REJECTED_STYLE = ("Rejected records with geometry", "#000000")
+PARCELS_STYLE = ("ALKIS example parcels (HVBG, sql/examples.sql)", "#c51b7d")
+PARCELS_ATTRIBUTION = "Flurstücke: HVBG INSPIRE-WFS ALKIS, dl-de/zero-2.0"
+
+PARCEL_POPUP_FIELDS = [
+    ("flurstueck", "Flurstück"),
+    ("national_cadastral_reference", "Cadastral reference"),
+    ("official_area_m2", "Official area (m²)"),
+    ("delivered_as", "Delivered as"),
+    ("sql_variable", "SQL variable"),
+    ("license", "License"),
+    ("fetched", "Fetched"),
+    ("source_link", "Source"),
+]
 
 RESTRICTIONS_SQL = """
 SELECT source, source_feature_id, restriction_category, hazard_type, status, status_raw,
@@ -186,6 +200,22 @@ def load_rejected(engine) -> gpd.GeoDataFrame:
     return frame
 
 
+def load_parcels(path: Path) -> gpd.GeoDataFrame:
+    if not path.is_file():
+        logger.warning("example parcels file %s not found; parcel layer skipped", path)
+        return gpd.GeoDataFrame(columns=["geometry"], geometry="geometry", crs=4326)
+    parcels = gpd.read_file(path).to_crs(4326)
+    parcels["source_link"] = [
+        f'<a href="{html.escape(url)}?SERVICE=WFS&amp;REQUEST=GetCapabilities&amp;VERSION=2.0.0" '
+        'target="_blank">GetCapabilities</a>'
+        for url in parcels["source_service"]
+    ]
+    escape_columns(
+        parcels, [field for field, _ in PARCEL_POPUP_FIELDS if field != "source_link"]
+    )
+    return parcels
+
+
 def add_states(fmap: folium.Map, states: gpd.GeoDataFrame, focus_state: str) -> None:
     def style(feature):
         focused = feature["properties"]["gen"] == focus_state
@@ -268,11 +298,39 @@ def add_rejected_layer(fmap: folium.Map, rejected: gpd.GeoDataFrame) -> None:
     group.add_to(fmap)
 
 
+def add_parcels_layer(fmap: folium.Map, parcels: gpd.GeoDataFrame) -> None:
+    if parcels.empty:
+        return
+    label, color = PARCELS_STYLE
+    group = folium.FeatureGroup(name=f"{label} ({len(parcels)})", show=False)
+    folium.GeoJson(
+        parcels[[field for field, _ in PARCEL_POPUP_FIELDS] + ["geometry"]],
+        style_function=lambda _: {
+            "color": color,
+            "weight": 3,
+            "fillOpacity": 0.05,
+        },
+        tooltip=folium.GeoJsonTooltip(fields=["flurstueck"], aliases=["Flurstück"]),
+        popup=folium.GeoJsonPopup(
+            fields=[f for f, _ in PARCEL_POPUP_FIELDS],
+            aliases=[a for _, a in PARCEL_POPUP_FIELDS],
+            localize=False,
+            labels=True,
+        ),
+    ).add_to(group)
+    group.add_to(fmap)
+
+
 def add_legend(fmap: folium.Map) -> None:
     items = "".join(
         f'<div><span style="display:inline-block;width:12px;height:12px;background:{color};'
         f'margin-right:6px;border-radius:50%"></span>{html.escape(label)}</div>'
         for label, color in [*CATEGORY_STYLES.values(), REJECTED_STYLE]
+    )
+    parcel_label, parcel_color = PARCELS_STYLE
+    items += (
+        f'<div><span style="display:inline-block;width:10px;height:10px;border:2px solid {parcel_color};'
+        f'margin-right:6px"></span>{html.escape(parcel_label)}</div>'
     )
     legend = (
         '<div style="position:fixed;bottom:24px;left:12px;z-index:9999;background:white;padding:8px 10px;'
@@ -282,12 +340,12 @@ def add_legend(fmap: folium.Map) -> None:
         '<div style="margin-top:6px;color:#555">Synthetic layers are demonstrator data, not real HLNUG records. '
         "Click a state to zoom, a feature for details.</div>"
         f'<div style="margin-top:6px;color:#777;font-size:10px">{html.escape(STATES_ATTRIBUTION)}<br>'
-        f"{html.escape(HLNUG_ATTRIBUTION)}</div></div>"
+        f"{html.escape(HLNUG_ATTRIBUTION)}<br>{html.escape(PARCELS_ATTRIBUTION)}</div></div>"
     )
     fmap.get_root().html.add_child(folium.Element(legend))
 
 
-def build_map(states, restrictions, rejected, focus_state: str) -> folium.Map:
+def build_map(states, restrictions, rejected, parcels, focus_state: str) -> folium.Map:
     fmap = folium.Map(tiles=None, prefer_canvas=True, control_scale=True)
     for variant, name in (
         ("web", "TopPlusOpen colour (BKG)"),
@@ -303,6 +361,7 @@ def build_map(states, restrictions, rejected, focus_state: str) -> folium.Map:
     if not restrictions.empty:
         add_category_layers(fmap, restrictions)
     add_rejected_layer(fmap, rejected)
+    add_parcels_layer(fmap, parcels)
     folium.LayerControl(collapsed=False).add_to(fmap)
     Fullscreen().add_to(fmap)
     add_legend(fmap)
@@ -327,6 +386,12 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     )
     parser.add_argument("--states-cache", type=Path, default=DEFAULT_STATES_CACHE)
     parser.add_argument(
+        "--parcels",
+        type=Path,
+        default=DEFAULT_PARCELS,
+        help="GeoJSON of example parcels to draw as an optional layer",
+    )
+    parser.add_argument(
         "--refresh-states",
         action="store_true",
         help="re-download state boundaries from BKG",
@@ -348,17 +413,19 @@ def main(argv: list[str] | None = None) -> int:
         return 1
     restrictions = load_restrictions(engine)
     rejected = load_rejected(engine)
+    parcels = load_parcels(args.parcels)
     logger.info(
-        "restrictions=%d by category=%s rejected_with_geometry=%d",
+        "restrictions=%d by category=%s rejected_with_geometry=%d parcels=%d",
         len(restrictions),
         json.dumps(restrictions["restriction_category"].value_counts().to_dict())
         if len(restrictions)
         else "{}",
         len(rejected),
+        len(parcels),
     )
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    build_map(states, restrictions, rejected, args.state).save(args.output)
+    build_map(states, restrictions, rejected, parcels, args.state).save(args.output)
     logger.info("map written to %s", args.output)
     return 0
 
