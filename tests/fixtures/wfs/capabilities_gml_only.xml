@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<wfs:WFS_Capabilities version="2.0.0"
+    xmlns:wfs="http://www.opengis.net/wfs/2.0"
+    xmlns:ows="http://www.opengis.net/ows/1.1"
+    xmlns:xlink="http://www.w3.org/1999/xlink"
+    xmlns:hlnug_demo="https://fixture.invalid/hlnug_demo">
+  <ows:ServiceIdentification>
+    <ows:Title>SYNTHETIC FIXTURE - HLNUG-style Bergbau, Hohlraeume und Altflaechen (not real data)</ows:Title>
+    <ows:Abstract>Synthetic demonstrator for IRIS TASK 090. No public WFS for these categories exists in Hesse; see docs/source_discovery.md.</ows:Abstract>
+    <ows:ServiceType>WFS</ows:ServiceType>
+    <ows:ServiceTypeVersion>2.0.0</ows:ServiceTypeVersion>
+    <ows:Fees>none (synthetic)</ows:Fees>
+    <ows:AccessConstraints>none (synthetic fixture data)</ows:AccessConstraints>
+  </ows:ServiceIdentification>
+  <ows:OperationsMetadata>
+    <ows:Operation name="GetCapabilities">
+      <ows:DCP><ows:HTTP><ows:Get xlink:href="https://fixture.invalid/hlnug/wfs"/></ows:HTTP></ows:DCP>
+    </ows:Operation>
+    <ows:Operation name="DescribeFeatureType">
+      <ows:DCP><ows:HTTP><ows:Get xlink:href="https://fixture.invalid/hlnug/wfs"/></ows:HTTP></ows:DCP>
+    </ows:Operation>
+    <ows:Operation name="GetFeature">
+      <ows:DCP><ows:HTTP><ows:Get xlink:href="https://fixture.invalid/hlnug/wfs"/></ows:HTTP></ows:DCP>
+      <ows:Parameter name="outputFormat">
+        <ows:AllowedValues>
+          <ows:Value>application/gml+xml; version=3.2</ows:Value>
+        </ows:AllowedValues>
+      </ows:Parameter>
+    </ows:Operation>
+  </ows:OperationsMetadata>
+  <wfs:FeatureTypeList>
+    <wfs:FeatureType>
+      <wfs:Name>hlnug_demo:he_bergbau_kavernen</wfs:Name>
+      <wfs:Title>Bergbauberechtigungen, Schaechte, Hohlraeume und Altflaechen (synthetisch)</wfs:Title>
+      <wfs:DefaultCRS>urn:ogc:def:crs:EPSG::25832</wfs:DefaultCRS>
+      <wfs:OtherCRS>urn:ogc:def:crs:EPSG::4258</wfs:OtherCRS>
+      <wfs:OtherCRS>urn:ogc:def:crs:EPSG::31467</wfs:OtherCRS>
+      <ows:WGS84BoundingBox>
+        <ows:LowerCorner>7.77 49.39</ows:LowerCorner>
+        <ows:UpperCorner>10.24 51.66</ows:UpperCorner>
+      </ows:WGS84BoundingBox>
+    </wfs:FeatureType>
+  </wfs:FeatureTypeList>
+</wfs:WFS_Capabilities>

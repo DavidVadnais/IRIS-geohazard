@@ -1,0 +1,29 @@
+{
+ "type": "FeatureCollection",
+ "crs": {
+  "type": "name",
+  "properties": {
+   "name": "urn:ogc:def:crs:EPSG::31467"
+  }
+ },
+ "numberReturned": 1,
+ "features": [
+  {
+   "type": "Feature",
+   "id": "he_bergbau_kavernen.GK-1",
+   "properties": {
+    "OBJEKT_ID": "GK-1",
+    "OBJEKTART": "Schacht",
+    "STATUS": "stillgelegt",
+    "GEFAEHRDUNGSKLASSE": "hoch"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     3534076.43,
+     5686872.17
+    ]
+   }
+  }
+ ]
+}

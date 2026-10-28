@@ -1,0 +1,82 @@
+{
+ "type": "FeatureCollection",
+ "crs": {
+  "type": "name",
+  "properties": {
+   "name": "urn:ogc:def:crs:EPSG::25832"
+  }
+ },
+ "numberReturned": 2,
+ "features": [
+  {
+   "type": "Feature",
+   "id": "he_bergbau_kavernen.BT-1",
+   "properties": {
+    "OBJEKT_ID": "BT-1",
+    "OBJEKTART": "Hohlraum",
+    "STATUS": "stillgelegt",
+    "GEFAEHRDUNGSKLASSE": "hoch"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       490000,
+       5580000
+      ],
+      [
+       490100,
+       5580100
+      ],
+      [
+       490100,
+       5580000
+      ],
+      [
+       490000,
+       5580100
+      ],
+      [
+       490000,
+       5580000
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "he_bergbau_kavernen.CL-1",
+   "properties": {
+    "OBJEKT_ID": "CL-1",
+    "OBJEKTART": "Hohlraum",
+    "STATUS": "stillgelegt",
+    "GEFAEHRDUNGSKLASSE": "hoch"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       491000,
+       5581000
+      ],
+      [
+       491010,
+       5581010
+      ],
+      [
+       491020,
+       5581020
+      ],
+      [
+       491000,
+       5581000
+      ]
+     ]
+    ]
+   }
+  }
+ ]
+}

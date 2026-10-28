@@ -1,0 +1,40 @@
+{
+ "type": "FeatureCollection",
+ "numberReturned": 2,
+ "features": [
+  {
+   "type": "Feature",
+   "id": "he_bergbau_kavernen.NC-1",
+   "properties": {
+    "OBJEKT_ID": "NC-1",
+    "OBJEKTART": "Schacht",
+    "STATUS": "stillgelegt",
+    "GEFAEHRDUNGSKLASSE": "hoch"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     534000,
+     5685000
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "he_bergbau_kavernen.NC-2",
+   "properties": {
+    "OBJEKT_ID": "NC-2",
+    "OBJEKTART": "Schacht",
+    "STATUS": "stillgelegt",
+    "GEFAEHRDUNGSKLASSE": "hoch"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     534100,
+     5685100
+    ]
+   }
+  }
+ ]
+}

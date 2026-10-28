@@ -1,0 +1,27 @@
+{
+ "type": "FeatureCollection",
+ "crs": {
+  "type": "name",
+  "properties": {
+   "name": "EPSG:25832"
+  }
+ },
+ "features": [
+  {
+   "type": "Feature",
+   "id": 3,
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     532030,
+     5714000
+    ]
+   },
+   "properties": {
+    "OBJECTID": 3,
+    "AMT_NR": 1003,
+    "TS_FLAE": 4.5
+   }
+  }
+ ]
+}

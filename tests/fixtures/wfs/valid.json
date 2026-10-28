@@ -1,0 +1,140 @@
+{
+ "type": "FeatureCollection",
+ "crs": {
+  "type": "name",
+  "properties": {
+   "name": "urn:ogc:def:crs:EPSG::25832"
+  }
+ },
+ "numberReturned": 4,
+ "features": [
+  {
+   "type": "Feature",
+   "id": "he_bergbau_kavernen.B-1",
+   "properties": {
+    "OBJEKT_ID": "B-1",
+    "OBJEKTART": "Bergbauberechtigung",
+    "STATUS": "erloschen",
+    "GEFAEHRDUNGSKLASSE": "gering"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       463000,
+       5602000
+      ],
+      [
+       465000,
+       5602000
+      ],
+      [
+       465000,
+       5604000
+      ],
+      [
+       463000,
+       5604000
+      ],
+      [
+       463000,
+       5602000
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "he_bergbau_kavernen.S-1",
+   "properties": {
+    "OBJEKT_ID": "S-1",
+    "OBJEKTART": "Schacht",
+    "STATUS": "stillgelegt",
+    "GEFAEHRDUNGSKLASSE": "hoch"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     534000,
+     5685000
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "he_bergbau_kavernen.H-1",
+   "properties": {
+    "OBJEKT_ID": "H-1",
+    "OBJEKTART": "Kaverne",
+    "STATUS": "in Betrieb",
+    "GEFAEHRDUNGSKLASSE": "mittel"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       575000,
+       5639000
+      ],
+      [
+       575300,
+       5639000
+      ],
+      [
+       575300,
+       5639300
+      ],
+      [
+       575000,
+       5639300
+      ],
+      [
+       575000,
+       5639000
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "he_bergbau_kavernen.A-1",
+   "properties": {
+    "OBJEKT_ID": "A-1",
+    "OBJEKTART": "Altablagerung",
+    "STATUS": "in Bearbeitung",
+    "GEFAEHRDUNGSKLASSE": "Keine Gefährdung bekannt"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       477000,
+       5552000
+      ],
+      [
+       477400,
+       5552000
+      ],
+      [
+       477400,
+       5552400
+      ],
+      [
+       477000,
+       5552400
+      ],
+      [
+       477000,
+       5552000
+      ]
+     ]
+    ]
+   }
+  }
+ ]
+}

@@ -1,0 +1,116 @@
+{
+ "type": "FeatureCollection",
+ "crs": {
+  "type": "name",
+  "properties": {
+   "name": "urn:ogc:def:crs:EPSG::25832"
+  }
+ },
+ "numberReturned": 5,
+ "features": [
+  {
+   "type": "Feature",
+   "id": "he_bergbau_kavernen.M-1",
+   "properties": {
+    "OBJEKT_ID": "M-1",
+    "OBJEKTART": "Schacht",
+    "STATUS": "stillgelegt",
+    "GEFAEHRDUNGSKLASSE": null
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     534000,
+     5685000
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "he_bergbau_kavernen.M-2",
+   "properties": {
+    "OBJEKT_ID": "M-2",
+    "OBJEKTART": "Schacht",
+    "STATUS": "stillgelegt",
+    "GEFAEHRDUNGSKLASSE": ""
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     534100,
+     5685000
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "he_bergbau_kavernen.M-3",
+   "properties": {
+    "OBJEKT_ID": "M-3",
+    "OBJEKTART": "Altstandort",
+    "STATUS": "altlastverdächtig",
+    "GEFAEHRDUNGSKLASSE": "unbekannt"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       477500,
+       5527000
+      ],
+      [
+       477600,
+       5527000
+      ],
+      [
+       477600,
+       5527100
+      ],
+      [
+       477500,
+       5527100
+      ],
+      [
+       477500,
+       5527000
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "he_bergbau_kavernen.M-4",
+   "properties": {
+    "OBJEKT_ID": "M-4",
+    "OBJEKTART": "Stollen",
+    "STATUS": "verfüllt"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     465200,
+     5612400
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "he_bergbau_kavernen.P-1",
+   "properties": {
+    "OBJEKT_ID": "P-1",
+    "OBJEKTART": "Schacht",
+    "STATUS": "stillgelegt",
+    "GEFAEHRDUNGSKLASSE": "gering"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     534200,
+     5685000
+    ]
+   }
+  }
+ ]
+}

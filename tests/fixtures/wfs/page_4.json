@@ -1,0 +1,29 @@
+{
+ "type": "FeatureCollection",
+ "crs": {
+  "type": "name",
+  "properties": {
+   "name": "urn:ogc:def:crs:EPSG::25832"
+  }
+ },
+ "numberReturned": 1,
+ "features": [
+  {
+   "type": "Feature",
+   "id": "he_bergbau_kavernen.P-5",
+   "properties": {
+    "OBJEKT_ID": "P-5",
+    "OBJEKTART": "Schacht",
+    "STATUS": "stillgelegt",
+    "GEFAEHRDUNGSKLASSE": "hoch"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     534400,
+     5685000
+    ]
+   }
+  }
+ ]
+}

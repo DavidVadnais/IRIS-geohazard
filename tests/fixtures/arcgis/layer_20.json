@@ -1,0 +1,23 @@
+{
+ "id": 20,
+ "name": "Erdfälle und Senkungsmulden",
+ "geometryType": "esriGeometryPoint",
+ "maxRecordCount": 2,
+ "fields": [
+  {
+   "name": "OBJECTID",
+   "type": "esriFieldTypeOID"
+  },
+  {
+   "name": "AMT_NR",
+   "type": "esriFieldTypeInteger"
+  },
+  {
+   "name": "TS_FLAE",
+   "type": "esriFieldTypeDouble"
+  }
+ ],
+ "editingInfo": {
+  "lastEditDate": 1735689600000
+ }
+}

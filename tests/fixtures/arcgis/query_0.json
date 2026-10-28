@@ -1,0 +1,47 @@
+{
+ "type": "FeatureCollection",
+ "crs": {
+  "type": "name",
+  "properties": {
+   "name": "EPSG:25832"
+  }
+ },
+ "features": [
+  {
+   "type": "Feature",
+   "id": 1,
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     532010,
+     5714000
+    ]
+   },
+   "properties": {
+    "OBJECTID": 1,
+    "AMT_NR": 1001,
+    "TS_FLAE": 1.5
+   }
+  },
+  {
+   "type": "Feature",
+   "id": 2,
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     532020,
+     5714000
+    ]
+   },
+   "properties": {
+    "OBJECTID": 2,
+    "AMT_NR": 1002,
+    "TS_FLAE": 3.0
+   }
+  }
+ ],
+ "exceededTransferLimit": true,
+ "properties": {
+  "exceededTransferLimit": true
+ }
+}

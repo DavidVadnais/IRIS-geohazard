@@ -1,0 +1,40 @@
+{
+ "type": "FeatureCollection",
+ "crs": {
+  "type": "name",
+  "properties": {
+   "name": "urn:ogc:def:crs:EPSG::25832"
+  }
+ },
+ "numberReturned": 2,
+ "features": [
+  {
+   "type": "Feature",
+   "id": "he_bergbau_kavernen.N-1",
+   "properties": {
+    "OBJEKT_ID": "N-1",
+    "OBJEKTART": "Schacht",
+    "STATUS": "stillgelegt",
+    "GEFAEHRDUNGSKLASSE": "hoch"
+   },
+   "geometry": null
+  },
+  {
+   "type": "Feature",
+   "id": "he_bergbau_kavernen.S-1",
+   "properties": {
+    "OBJEKT_ID": "S-1",
+    "OBJEKTART": "Schacht",
+    "STATUS": "stillgelegt",
+    "GEFAEHRDUNGSKLASSE": "hoch"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     534000,
+     5685000
+    ]
+   }
+  }
+ ]
+}
