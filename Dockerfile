@@ -25,7 +25,7 @@ COPY --chown=iris:iris . .
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    IRIS_CONFIG=/app/config.yaml
+    IRIS_CONFIG=/app/config.example.yaml
 
 USER iris
 
