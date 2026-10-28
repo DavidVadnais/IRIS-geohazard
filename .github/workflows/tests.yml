@@ -1,0 +1,49 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create .env with a throwaway password
+        run: |
+          cp .env.example .env
+          password="$(openssl rand -hex 24)"
+          sed -i "s/^POSTGRES_PASSWORD=$/POSTGRES_PASSWORD=${password}/; s/^IRIS_DATABASE__PASSWORD=$/IRIS_DATABASE__PASSWORD=${password}/" .env
+
+      - name: Build image
+        run: docker compose build
+
+      - name: Start PostGIS
+        run: docker compose up -d --wait db
+
+      - name: Run pytest
+        run: |
+          set -o pipefail
+          docker compose run --rm harvester "python -m pytest -v -rs -p no:cacheprovider" | tee pytest.log
+
+      - name: Fail if database tests were skipped
+        run: |
+          if grep -qE "[0-9]+ skipped" pytest.log; then
+            echo "::error::database tests were skipped, PostGIS was not reachable"
+            exit 1
+          fi
+
+      - name: Database logs on failure
+        if: failure()
+        run: docker compose logs db
+
+      - name: Stop services
+        if: always()
+        run: docker compose down -v
