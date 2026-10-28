@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+    xmlns:gml="http://www.opengis.net/gml/3.2"
+    xmlns:hlnug_demo="https://fixture.invalid/hlnug_demo"
+    targetNamespace="https://fixture.invalid/hlnug_demo"
+    elementFormDefault="qualified">
+  <xsd:import namespace="http://www.opengis.net/gml/3.2" schemaLocation="http://schemas.opengis.net/gml/3.2.1/gml.xsd"/>
+  <xsd:complexType name="he_bergbau_kavernenType">
+    <xsd:complexContent>
+      <xsd:extension base="gml:AbstractFeatureType">
+        <xsd:sequence>
+          <xsd:element name="OBJEKT_ID" type="xsd:string" nillable="false"/>
+          <xsd:element name="OBJEKTART" type="xsd:string" nillable="true"/>
+          <xsd:element name="BEZEICHNUNG" type="xsd:string" nillable="true"/>
+          <xsd:element name="STATUS" type="xsd:string" nillable="true"/>
+          <xsd:element name="GEFAEHRDUNGSKLASSE" type="xsd:string" nillable="true"/>
+          <xsd:element name="STAND" type="xsd:date" nillable="true"/>
+          <xsd:element name="GEOM" type="gml:GeometryPropertyType" nillable="true"/>
+        </xsd:sequence>
+      </xsd:extension>
+    </xsd:complexContent>
+  </xsd:complexType>
+  <xsd:element name="he_bergbau_kavernen" type="hlnug_demo:he_bergbau_kavernenType" substitutionGroup="gml:AbstractFeature"/>
+</xsd:schema>

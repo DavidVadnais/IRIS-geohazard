@@ -1,0 +1,100 @@
+Null display is "<NULL>".
+== 1. Parcel overlap: restrictions intersecting a parcel given in EPSG:25832
+   source   | source_feature_id | restriction_category |       status        |  hazard_classification   | classification_status | overlap_m2 |                                                                 source_url                                                                  
+------------+-------------------+----------------------+---------------------+--------------------------+-----------------------+------------+---------------------------------------------------------------------------------------------------------------------------------------------
+ hlnug_demo | A-0001            | contaminated_land    | under_investigation | Keine Gefährdung bekannt | published             |    10000.0 | https://fixture.invalid/hlnug/wfs?service=WFS&version=2.0.0&request=GetFeature&typeNames=hlnug_demo%3Ahe_bergbau_kavernen&resourceId=A-0001
+
+== 2. Parcel overlap: parcel delivered in WGS84 (EPSG:4326), transformed to 25832 before the GIST-indexed test
+   source   | source_feature_id | restriction_category | classification_status 
+------------+-------------------+----------------------+-----------------------
+ hlnug_demo | S-0001            | shaft                | published
+
+== 3. Proximity: restrictions within 250 m of a site (EPSG:25832 units are metres)
+   source   | source_feature_id | restriction_category | hazard_classification | classification_status | distance_m 
+------------+-------------------+----------------------+-----------------------+-----------------------+------------
+ hlnug_demo | S-0001            | shaft                | hoch                  | published             |      180.3
+
+== 4. Proximity: count live sinkholes within 1 km of a site, nearest first (KNN)
+ source_feature_id | amt_nr | distance_m 
+-------------------+--------+------------
+ 1                 | 2944   |       19.7
+
+== 5. The GIST index is used by ST_DWithin
+                                                         QUERY PLAN                                                          
+-----------------------------------------------------------------------------------------------------------------------------
+ Index Scan using mining_restrictions_geom_gist on mining_restrictions
+   Index Cond: (geom && st_expand('0101000020E864000000000000983E204100000000AACC5541'::geometry, '1000'::double precision))
+   Filter: st_dwithin(geom, '0101000020E864000000000000983E204100000000AACC5541'::geometry, '1000'::double precision)
+
+== V1. Inventory by source, category and classification status
+            source             | restriction_category | classification_status |  n   
+-------------------------------+----------------------+-----------------------+------
+ hlnug_demo                    | cavity               | published             |    2
+ hlnug_demo                    | contaminated_land    | missing               |    1
+ hlnug_demo                    | contaminated_land    | published             |    1
+ hlnug_demo                    | contaminated_land    | unrecognised          |    1
+ hlnug_demo                    | mine_right           | published             |    2
+ hlnug_demo                    | shaft                | missing               |    2
+ hlnug_demo                    | shaft                | published             |    1
+ hlnug:geologie/geogefahren/20 | sinkhole_subsidence  | missing               | 4691
+ hlnug:geologie/rohstoffe/1    | extraction_site      | missing               |  276
+
+== V2. Geometry integrity (expect all zeros)
+ invalid | empty | wrong_srid | outside_hesse_bbox | repaired_kept 
+---------+-------+------------+--------------------+---------------
+       0 |     0 |          0 |                  0 |             1
+
+== V3. Duplicate stable keys (expect no rows)
+ source | source_feature_id | count 
+--------+-------------------+-------
+
+== V4. Provenance completeness: every row traceable to its source (expect all zeros)
+ no_source_url | no_layer | no_license | no_fetched_at | no_run 
+---------------+----------+------------+---------------+--------
+             0 |        0 |          0 |             0 |      0
+
+== V5. Missing classification is never stored as a value (expect zero)
+ missing_with_value 
+--------------------
+                  0
+
+== V6. Classification values as published (missing shown separately, never folded into a low class)
+ restriction_category |      classification      | classification_status | count 
+----------------------+--------------------------+-----------------------+-------
+ cavity               | hoch                     | published             |     1
+ cavity               | mittel                   | published             |     1
+ contaminated_land    | Keine Gefährdung bekannt | published             |     1
+ contaminated_land    | Klasse 7                 | unrecognised          |     1
+ contaminated_land    | <missing>                | missing               |     1
+ mine_right           | gering                   | published             |     1
+ mine_right           | mittel                   | published             |     1
+ shaft                | hoch                     | published             |     1
+ shaft                | <missing>                | missing               |     2
+
+== V7. Rejected records of the latest run per source, by reason
+   source   |          reason_code          | n | feature_ids 
+------------+-------------------------------+---+-------------
+ hlnug_demo | duplicate_feature_id          | 1 | S-0001
+ hlnug_demo | empty_geometry                | 1 | E-0001
+ hlnug_demo | invalid_geometry_unrepairable | 1 | H-0003
+ hlnug_demo | null_geometry                 | 1 | N-0001
+ hlnug_demo | out_of_region                 | 1 | O-0001
+ hlnug_demo | unmapped_category             | 1 | U-0001
+
+== V8. Run log: legal/access metadata, data currency and counts per run
+            source             |  mode   |  status   |       started       | fetched | ins  | upd | unch | rej |                                  license                                  |                                                  access_constraints                                                   |       fees       |     data_currency     
+-------------------------------+---------+-----------+---------------------+---------+------+-----+------+-----+---------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------+------------------+-----------------------
+ hlnug_demo                    | fixture | succeeded | 2026-10-28 00:16:44 |      16 |   10 |   0 |    0 |   6 | synthetic fixture data, no license                                        | none (synthetic fixture data)                                                                                         | none (synthetic) | not stated by service
+ hlnug:geologie/geogefahren/20 | live    | succeeded | 2026-10-28 00:16:46 |    4691 | 4691 |   0 |    0 |   0 | CC-BY-4.0 (assumed, per HLNUG INSPIRE Nutzungsbedingungen Stand Mai 2025) | noLimitations; keine rechtsverbindliche Auskunft; © Hessisches Landesamt für Naturschutz, Umwelt und Geologie (HLNUG) | <NULL>           | not stated by service
+ hlnug:geologie/rohstoffe/1    | live    | succeeded | 2026-10-28 00:16:53 |     276 |  276 |   0 |    0 |   0 | CC-BY-4.0 (assumed, per HLNUG INSPIRE Nutzungsbedingungen Stand Mai 2025) | noLimitations; keine rechtsverbindliche Auskunft; © Hessisches Landesamt für Naturschutz, Umwelt und Geologie (HLNUG) | <NULL>           | not stated by service
+ hlnug_demo                    | fixture | succeeded | 2026-10-28 00:16:56 |      16 |    0 |   0 |   10 |   6 | synthetic fixture data, no license                                        | none (synthetic fixture data)                                                                                         | none (synthetic) | not stated by service
+ hlnug:geologie/geogefahren/20 | live    | succeeded | 2026-10-28 00:16:58 |    4691 |    0 |   0 | 4691 |   0 | CC-BY-4.0 (assumed, per HLNUG INSPIRE Nutzungsbedingungen Stand Mai 2025) | noLimitations; keine rechtsverbindliche Auskunft; © Hessisches Landesamt für Naturschutz, Umwelt und Geologie (HLNUG) | <NULL>           | not stated by service
+ hlnug:geologie/rohstoffe/1    | live    | succeeded | 2026-10-28 00:17:04 |     276 |    0 |   0 |  276 |   0 | CC-BY-4.0 (assumed, per HLNUG INSPIRE Nutzungsbedingungen Stand Mai 2025) | noLimitations; keine rechtsverbindliche Auskunft; © Hessisches Landesamt für Naturschutz, Umwelt und Geologie (HLNUG) | <NULL>           | not stated by service
+
+== V9. Idempotency: the latest run per source changed nothing when the source did not change
+            source             | inserted_count | updated_count | unchanged_count 
+-------------------------------+----------------+---------------+-----------------
+ hlnug_demo                    |              0 |             0 |              10
+ hlnug:geologie/geogefahren/20 |              0 |             0 |            4691
+ hlnug:geologie/rohstoffe/1    |              0 |             0 |             276
+

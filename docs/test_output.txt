@@ -1,0 +1,37 @@
+tests/test_loader.py::test_first_load_inserts_and_records_rejects PASSED
+tests/test_loader.py::test_duplicate_run_changes_nothing PASSED
+tests/test_loader.py::test_changed_feature_is_updated_once PASSED
+tests/test_pipeline.py::test_valid_features PASSED
+tests/test_pipeline.py::test_null_geometry PASSED
+tests/test_pipeline.py::test_invalid_geometry PASSED
+tests/test_pipeline.py::test_wrong_crs_is_reprojected PASSED
+tests/test_pipeline.py::test_missing_crs_is_rejected PASSED
+tests/test_pipeline.py::test_missing_classification PASSED
+tests/test_pipeline.py::test_duplicate_run_produces_no_changes PASSED
+tests/test_pipeline.py::test_pagination PASSED
+tests/test_pipeline.py::test_gml_fallback_when_json_not_offered PASSED
+tests/test_pipeline.py::test_http_error_marks_run_failed_and_loads_nothing PASSED
+tests/test_pipeline.py::test_missing_layer_fails_discovery_visibly PASSED
+tests/test_pipeline.py::test_arcgis_rest_paging_and_metadata PASSED
+tests/test_transformer.py::test_valid_features_are_mapped_with_provenance PASSED
+tests/test_transformer.py::test_null_and_empty_geometry_are_rejected_and_logged PASSED
+tests/test_transformer.py::test_invalid_geometry_is_repaired_or_rejected PASSED
+tests/test_transformer.py::test_unsupported_geometry_type_is_rejected PASSED
+tests/test_transformer.py::test_gauss_krueger_input_is_reprojected_to_25832 PASSED
+tests/test_transformer.py::test_missing_crs_is_rejected_not_assumed PASSED
+tests/test_transformer.py::test_unaccepted_crs_is_rejected PASSED
+tests/test_transformer.py::test_swapped_axis_wgs84_is_caught_as_out_of_region PASSED
+tests/test_transformer.py::test_missing_classification_is_null_and_never_safe[None] PASSED
+tests/test_transformer.py::test_missing_classification_is_null_and_never_safe[] PASSED
+tests/test_transformer.py::test_missing_classification_is_null_and_never_safe[  ] PASSED
+tests/test_transformer.py::test_missing_classification_is_null_and_never_safe[unbekannt] PASSED
+tests/test_transformer.py::test_missing_classification_is_null_and_never_safe[Unbekannt] PASSED
+tests/test_transformer.py::test_missing_classification_is_null_and_never_safe[k.A.] PASSED
+tests/test_transformer.py::test_missing_classification_is_null_and_never_safe[n.b.] PASSED
+tests/test_transformer.py::test_missing_classification_is_null_and_never_safe[-] PASSED
+tests/test_transformer.py::test_missing_classification_is_null_and_never_safe[nan] PASSED
+tests/test_transformer.py::test_classification_vocabulary_handling PASSED
+tests/test_transformer.py::test_live_layer_without_classification_field_is_missing PASSED
+tests/test_transformer.py::test_unmapped_category_missing_id_and_duplicate_id_are_rejected PASSED
+tests/test_transformer.py::test_content_hash_is_stable_across_runs_and_sensitive_to_changes PASSED
+============================== 36 passed in 2.31s ==============================
