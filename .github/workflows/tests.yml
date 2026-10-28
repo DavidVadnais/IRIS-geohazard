@@ -16,11 +16,19 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: ruff check
-        run: pipx run ruff==0.16.7 check --output-format=github
+      - uses: actions/cache@v6
+        with:
+          path: ~/.cache/pre-commit
+          key: pre-commit-${{ hashFiles('.pre-commit-config.yaml') }}
 
-      - name: ruff format
-        run: pipx run ruff==0.16.7 format --check --diff
+      - name: ruff via pre-commit
+        run: pipx run pre-commit==4.6.2 run --all-files --show-diff-on-failure --color=always
+
+      - name: shellcheck
+        run: docker run --rm -v "$PWD":/mnt -w /mnt koalaman/shellcheck:v0.11.0 $(git ls-files '*.sh')
+
+      - name: shfmt
+        run: docker run --rm -v "$PWD":/mnt -w /mnt mvdan/shfmt:v3.14.1 --diff $(git ls-files '*.sh')
 
   pytest:
     runs-on: ubuntu-latest
