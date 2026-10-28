@@ -119,7 +119,7 @@ run_examples_sql() {
 }
 
 step "Prerequisites"
-say "Everything runs in Docker (Python 3.15 + PostGIS 16). Nothing is installed on the host."
+say "Everything runs in Docker (Python 3.15 + PostgreSQL 17 / PostGIS 3.5). Nothing is installed on the host."
 command -v docker >/dev/null || {
     echo "docker is required" >&2
     exit 1
@@ -277,7 +277,7 @@ sql_section "1."
 sql_section "2."
 sql_section "3."
 sql_section "5."
-if grep -q "Index Scan on mining_restrictions_geom_gist" "$SQL_OUT"; then
+if grep -qE "Index Scan (using|on) mining_restrictions_geom_gist" "$SQL_OUT"; then
     checked "the proximity query uses the GIST index (example 5)"
 else
     printf '%s✘ the proximity query did not use the GIST index%s\n' "$RED" "$RESET"
