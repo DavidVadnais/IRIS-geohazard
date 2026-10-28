@@ -1,0 +1,21 @@
+sources:
+  - hlnug_fixture_wfs
+  - hlnug_geogefahren_erdfaelle
+  - hlnug_rohstoffe_abbaustellen
+
+staging_schema: iris_staging
+target_srid: 25832
+log_level: INFO
+
+database:
+  host: localhost
+  port: 5432
+  name: iris
+  user: iris
+
+http:
+  timeout_seconds: 60
+  max_retries: 3
+  backoff_factor: 1.5
+  page_size: 1000
+  user_agent: IRIS-geohazard-harvester/0.1
