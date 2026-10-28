@@ -9,7 +9,11 @@ from geoalchemy2.shape import from_shape
 from sqlalchemy import Engine, func, insert, literal_column, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
-from geohazard.loaders.tables import harvest_runs, mining_restrictions, mining_restrictions_rejected
+from geohazard.loaders.tables import (
+    harvest_runs,
+    mining_restrictions,
+    mining_restrictions_rejected,
+)
 from geohazard.transformers.hazard_transformer import RejectedRecord, StagedRecord
 
 logger = logging.getLogger(__name__)
@@ -85,7 +89,11 @@ class PostgisLoader:
     def start_run(self, metadata: RunMetadata) -> uuid.UUID:
         run_id = uuid.uuid4()
         with self.engine.begin() as connection:
-            connection.execute(insert(harvest_runs).values(run_id=run_id, status="running", **asdict(metadata)))
+            connection.execute(
+                insert(harvest_runs).values(
+                    run_id=run_id, status="running", **asdict(metadata)
+                )
+            )
         logger.info(
             "run started run_id=%s source=%s mode=%s url=%s layers=%s license=%r access_constraints=%r fees=%r data_currency=%r",
             run_id,
@@ -111,14 +119,21 @@ class PostgisLoader:
         inserted = updated = 0
         with self.engine.begin() as connection:
             for batch in _batches(staged, BATCH_SIZE):
-                statement = pg_insert(mining_restrictions).values([_staged_row(r, run_id) for r in batch])
-                changed_set = {column: statement.excluded[column] for column in UPSERT_UPDATE_COLUMNS}
+                statement = pg_insert(mining_restrictions).values(
+                    [_staged_row(r, run_id) for r in batch]
+                )
+                changed_set = {
+                    column: statement.excluded[column]
+                    for column in UPSERT_UPDATE_COLUMNS
+                }
                 changed_set["last_changed_at"] = func.now()
                 changed_set["last_run_id"] = statement.excluded.last_run_id
                 statement = statement.on_conflict_do_update(
                     constraint="mining_restrictions_source_feature_uq",
                     set_=changed_set,
-                    where=mining_restrictions.c.content_hash.is_distinct_from(statement.excluded.content_hash),
+                    where=mining_restrictions.c.content_hash.is_distinct_from(
+                        statement.excluded.content_hash
+                    ),
                 ).returning(literal_column("(xmax = 0)").label("inserted"))
                 for (was_inserted,) in connection.execute(statement):
                     if was_inserted:
@@ -126,7 +141,10 @@ class PostgisLoader:
                     else:
                         updated += 1
             for batch in _batches(rejected, BATCH_SIZE):
-                connection.execute(insert(mining_restrictions_rejected), [_rejected_row(r, run_id) for r in batch])
+                connection.execute(
+                    insert(mining_restrictions_rejected),
+                    [_rejected_row(r, run_id) for r in batch],
+                )
         return LoadCounts(
             fetched=fetched_count,
             inserted=inserted,

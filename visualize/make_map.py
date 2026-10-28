@@ -34,7 +34,9 @@ STATES_WFS_PARAMS = {
 }
 LAND_GEOFACTOR = 9
 STATES_ATTRIBUTION = "Verwaltungsgebiete: © GeoBasis-DE / BKG (VG2500), dl-de/by-2-0"
-HLNUG_ATTRIBUTION = "Restriktionen: © HLNUG (CC BY 4.0, assumed) and synthetic IRIS fixture data"
+HLNUG_ATTRIBUTION = (
+    "Restriktionen: © HLNUG (CC BY 4.0, assumed) and synthetic IRIS fixture data"
+)
 
 TOPPLUS_URL = "https://sgx.geodatenzentrum.de/wmts_topplus_open/tile/1.0.0/{variant}/default/WEBMERCATOR/{{z}}/{{y}}/{{x}}.png"
 TOPPLUS_ATTRIBUTION = (
@@ -90,12 +92,17 @@ POPUP_FIELDS = [
 ]
 
 
-PREBUILT_HTML_FIELDS = frozenset({"status_display", "classification_display", "source_link"})
+PREBUILT_HTML_FIELDS = frozenset(
+    {"status_display", "classification_display", "source_link"}
+)
 
 
 def escape_columns(frame: gpd.GeoDataFrame, columns) -> None:
     for column in columns:
-        frame[column] = [html.escape(str(value)) if value is not None else "" for value in frame[column]]
+        frame[column] = [
+            html.escape(str(value)) if value is not None else ""
+            for value in frame[column]
+        ]
 
 
 def load_states(cache: Path, refresh: bool) -> gpd.GeoDataFrame:
@@ -107,7 +114,11 @@ def load_states(cache: Path, refresh: bool) -> gpd.GeoDataFrame:
         cache.write_bytes(response.content)
     states = gpd.read_file(cache)
     if states.crs is None or states.crs.to_epsg() != 4326:
-        states = states.set_crs(4326, allow_override=True) if states.crs is None else states.to_crs(4326)
+        states = (
+            states.set_crs(4326, allow_override=True)
+            if states.crs is None
+            else states.to_crs(4326)
+        )
     land = states[states["gf"] == LAND_GEOFACTOR]
     return land.dissolve(by="gen", as_index=False)[["gen", "bez", "nuts", "geometry"]]
 
@@ -129,9 +140,16 @@ def load_restrictions(engine) -> gpd.GeoDataFrame:
         html.escape(f"{s} ({raw})" if s and raw else (s or raw or "unknown"))
         for s, raw in zip(frame["status"], frame["status_raw"], strict=True)
     ]
-    frame["source_link"] = [f'<a href="{html.escape(url)}" target="_blank">open</a>' for url in frame["source_url"]]
-    frame["geom_was_repaired"] = frame["geom_was_repaired"].map({True: "yes", False: "no"})
-    escape_columns(frame, [field for field, _ in POPUP_FIELDS if field not in PREBUILT_HTML_FIELDS])
+    frame["source_link"] = [
+        f'<a href="{html.escape(url)}" target="_blank">open</a>'
+        for url in frame["source_url"]
+    ]
+    frame["geom_was_repaired"] = frame["geom_was_repaired"].map(
+        {True: "yes", False: "no"}
+    )
+    escape_columns(
+        frame, [field for field, _ in POPUP_FIELDS if field not in PREBUILT_HTML_FIELDS]
+    )
     return frame
 
 
@@ -154,7 +172,17 @@ def load_rejected(engine) -> gpd.GeoDataFrame:
         return gpd.GeoDataFrame(columns=["geometry"], geometry="geometry", crs=4326)
     frame = gpd.GeoDataFrame(rows, geometry="geometry", crs=25832).to_crs(4326)
     frame["geometry"] = frame.geometry.make_valid()
-    escape_columns(frame, ["source_feature_id", "source", "reason_code", "reason_detail", "mode", "layer_name"])
+    escape_columns(
+        frame,
+        [
+            "source_feature_id",
+            "source",
+            "reason_code",
+            "reason_detail",
+            "mode",
+            "layer_name",
+        ],
+    )
     return frame
 
 
@@ -185,10 +213,20 @@ def add_category_layers(fmap: folium.Map, restrictions: gpd.GeoDataFrame) -> Non
             continue
         group = folium.FeatureGroup(name=f"{label} ({len(subset)})", show=True)
         folium.GeoJson(
-            subset.drop(columns=["source_url", "status", "status_raw", "hazard_classification"]),
-            style_function=lambda _, c=color: {"color": c, "fillColor": c, "weight": 2, "fillOpacity": 0.4},
+            subset.drop(
+                columns=["source_url", "status", "status_raw", "hazard_classification"]
+            ),
+            style_function=lambda _, c=color: {
+                "color": c,
+                "fillColor": c,
+                "weight": 2,
+                "fillOpacity": 0.4,
+            },
             marker=folium.CircleMarker(radius=4, fill=True, fill_opacity=0.8, weight=1),
-            tooltip=folium.GeoJsonTooltip(fields=["source_feature_id", "restriction_category"], aliases=["ID", "Category"]),
+            tooltip=folium.GeoJsonTooltip(
+                fields=["source_feature_id", "restriction_category"],
+                aliases=["ID", "Category"],
+            ),
             popup=folium.GeoJsonPopup(
                 fields=[f for f, _ in POPUP_FIELDS],
                 aliases=[a for _, a in POPUP_FIELDS],
@@ -206,11 +244,24 @@ def add_rejected_layer(fmap: folium.Map, rejected: gpd.GeoDataFrame) -> None:
     group = folium.FeatureGroup(name=f"{label} ({len(rejected)})", show=False)
     folium.GeoJson(
         rejected,
-        style_function=lambda _: {"color": color, "weight": 2, "dashArray": "4 4", "fillOpacity": 0.1},
+        style_function=lambda _: {
+            "color": color,
+            "weight": 2,
+            "dashArray": "4 4",
+            "fillOpacity": 0.1,
+        },
         marker=folium.CircleMarker(radius=6, fill=False, weight=2, dash_array="3 3"),
-        tooltip=folium.GeoJsonTooltip(fields=["source_feature_id", "reason_code"], aliases=["ID", "Rejected"]),
+        tooltip=folium.GeoJsonTooltip(
+            fields=["source_feature_id", "reason_code"], aliases=["ID", "Rejected"]
+        ),
         popup=folium.GeoJsonPopup(
-            fields=["source_feature_id", "source", "reason_code", "reason_detail", "mode"],
+            fields=[
+                "source_feature_id",
+                "source",
+                "reason_code",
+                "reason_detail",
+                "mode",
+            ],
             aliases=["Feature ID", "Source", "Reason", "Detail", "Mode"],
         ),
     ).add_to(group)
@@ -238,8 +289,16 @@ def add_legend(fmap: folium.Map) -> None:
 
 def build_map(states, restrictions, rejected, focus_state: str) -> folium.Map:
     fmap = folium.Map(tiles=None, prefer_canvas=True, control_scale=True)
-    for variant, name in (("web", "TopPlusOpen colour (BKG)"), ("web_grau", "TopPlusOpen grey (BKG)")):
-        folium.TileLayer(TOPPLUS_URL.format(variant=variant), name=name, attr=TOPPLUS_ATTRIBUTION, max_zoom=18).add_to(fmap)
+    for variant, name in (
+        ("web", "TopPlusOpen colour (BKG)"),
+        ("web_grau", "TopPlusOpen grey (BKG)"),
+    ):
+        folium.TileLayer(
+            TOPPLUS_URL.format(variant=variant),
+            name=name,
+            attr=TOPPLUS_ATTRIBUTION,
+            max_zoom=18,
+        ).add_to(fmap)
     add_states(fmap, states, focus_state)
     if not restrictions.empty:
         add_category_layers(fmap, restrictions)
@@ -257,11 +316,21 @@ def build_map(states, restrictions, rejected, focus_state: str) -> folium.Map:
 
 
 def parse_args(argv: list[str] | None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Render iris_staging restrictions on a map of German states")
+    parser = argparse.ArgumentParser(
+        description="Render iris_staging restrictions on a map of German states"
+    )
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
-    parser.add_argument("--state", default=DEFAULT_STATE, help="state to highlight and zoom to (VG2500 'gen' name)")
+    parser.add_argument(
+        "--state",
+        default=DEFAULT_STATE,
+        help="state to highlight and zoom to (VG2500 'gen' name)",
+    )
     parser.add_argument("--states-cache", type=Path, default=DEFAULT_STATES_CACHE)
-    parser.add_argument("--refresh-states", action="store_true", help="re-download state boundaries from BKG")
+    parser.add_argument(
+        "--refresh-states",
+        action="store_true",
+        help="re-download state boundaries from BKG",
+    )
     return parser.parse_args(argv)
 
 
@@ -273,14 +342,18 @@ def main(argv: list[str] | None = None) -> int:
 
     states = load_states(args.states_cache, args.refresh_states)
     if args.state not in set(states["gen"]):
-        logger.error("unknown state %r; choose one of %s", args.state, sorted(states["gen"]))
+        logger.error(
+            "unknown state %r; choose one of %s", args.state, sorted(states["gen"])
+        )
         return 1
     restrictions = load_restrictions(engine)
     rejected = load_rejected(engine)
     logger.info(
         "restrictions=%d by category=%s rejected_with_geometry=%d",
         len(restrictions),
-        json.dumps(restrictions["restriction_category"].value_counts().to_dict()) if len(restrictions) else "{}",
+        json.dumps(restrictions["restriction_category"].value_counts().to_dict())
+        if len(restrictions)
+        else "{}",
         len(rejected),
     )
 

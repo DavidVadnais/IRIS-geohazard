@@ -109,6 +109,8 @@ docker compose exec -T db sh -c 'psql -X -U "$POSTGRES_USER" -d "$POSTGRES_DB"' 
 | Example + validation SQL | `docker compose exec -T db sh -c 'psql -X -U "$POSTGRES_USER" -d "$POSTGRES_DB"' < sql/examples.sql` |
 | Migrations only | `docker compose run --rm harvester "alembic upgrade head"` |
 | Stop / wipe | `docker compose down` / `docker compose down -v` |
+| Lint and format check | `ruff check && ruff format --check` (ruff 0.16.7, pinned in `pyproject.toml`) |
+| Enable the pre-commit hook (once per clone) | `pre-commit install`; commits are then blocked until `ruff check` and `ruff format --check` pass |
 
 - **Exit codes:** the runner exits `0` when every source succeeds and `1` when any source fails. A failed source is recorded as
   `status = 'failed'` with its error in `harvest_runs`, and nothing from it is loaded.

@@ -25,7 +25,9 @@ GML_OUTPUT_FORMAT = "application/gml+xml; version=3.2"
 
 
 class WfsScraper:
-    def __init__(self, source: DataSource, session: requests.Session, http: HttpSettings):
+    def __init__(
+        self, source: DataSource, session: requests.Session, http: HttpSettings
+    ):
         self.source = source
         self.session = session
         self.http = http
@@ -33,21 +35,31 @@ class WfsScraper:
 
     def _get(self, params: dict[str, str | int]) -> requests.Response:
         base = {"service": "WFS", "version": self.source.wfs_version}
-        return get(self.session, self.source.url, {**base, **params}, self.http.timeout_seconds)
+        return get(
+            self.session, self.source.url, {**base, **params}, self.http.timeout_seconds
+        )
 
     def discover(self) -> SourceMetadata:
         capabilities = self._get({"request": "GetCapabilities"}).content
-        service = WebFeatureService(self.source.url, version=self.source.wfs_version, xml=capabilities)
+        service = WebFeatureService(
+            self.source.url, version=self.source.wfs_version, xml=capabilities
+        )
         offered = set(service.contents)
-        missing = [layer.name for layer in self.source.layers if layer.name not in offered]
+        missing = [
+            layer.name for layer in self.source.layers if layer.name not in offered
+        ]
         if missing:
-            raise LayerNotFoundError(f"layers {missing} not offered by {self.source.url}; offered: {sorted(offered)}")
+            raise LayerNotFoundError(
+                f"layers {missing} not offered by {self.source.url}; offered: {sorted(offered)}"
+            )
         self.output_format = self._choose_output_format(service)
 
         schema_fields: dict[str, list[str]] = {}
         schema_documents: list[bytes] = []
         for layer in self.source.layers:
-            schema = self._get({"request": "DescribeFeatureType", "typeNames": layer.name}).content
+            schema = self._get(
+                {"request": "DescribeFeatureType", "typeNames": layer.name}
+            ).content
             schema_documents.append(schema)
             fields = describe_feature_type_fields(schema)
             schema_fields[layer.name] = fields
@@ -63,7 +75,8 @@ class WfsScraper:
         return SourceMetadata(
             source_url=self.source.url,
             layer_names=[layer.name for layer in self.source.layers],
-            access_constraints=getattr(identification, "accessconstraints", None) or self.source.access_constraints,
+            access_constraints=getattr(identification, "accessconstraints", None)
+            or self.source.access_constraints,
             fees=getattr(identification, "fees", None),
             data_currency=DATA_CURRENCY_NOT_STATED,
             capabilities_hash=sha256_hex(capabilities, *schema_documents),
@@ -72,20 +85,37 @@ class WfsScraper:
 
     def _choose_output_format(self, service: WebFeatureService) -> str:
         try:
-            formats = service.getOperationByName("GetFeature").parameters["outputFormat"]["values"]
-        except (KeyError, AttributeError):
+            formats = service.getOperationByName("GetFeature").parameters[
+                "outputFormat"
+            ]["values"]
+        except KeyError, AttributeError:
             formats = []
         if self.source.output_format in formats:
             return self.source.output_format
-        logger.warning("%s not offered (offered: %s); falling back to GML 3.2", self.source.output_format, formats)
+        logger.warning(
+            "%s not offered (offered: %s); falling back to GML 3.2",
+            self.source.output_format,
+            formats,
+        )
         return GML_OUTPUT_FORMAT
 
     def _check_schema(self, layer: LayerConfig, fields: list[str]) -> None:
         if layer.id_field not in fields:
-            raise ScraperError(f"id field {layer.id_field!r} missing from {layer.name} schema {fields}")
-        for optional in (layer.category_field, layer.status_field, layer.classification_field, layer.type_field):
+            raise ScraperError(
+                f"id field {layer.id_field!r} missing from {layer.name} schema {fields}"
+            )
+        for optional in (
+            layer.category_field,
+            layer.status_field,
+            layer.classification_field,
+            layer.type_field,
+        ):
             if optional and optional not in fields:
-                logger.warning("field %r missing from %s schema; values will be treated as absent", optional, layer.name)
+                logger.warning(
+                    "field %r missing from %s schema; values will be treated as absent",
+                    optional,
+                    layer.name,
+                )
 
     def fetch_layer(self, layer: LayerConfig) -> Iterator[FetchedPage]:
         start_index = 0
@@ -100,9 +130,19 @@ class WfsScraper:
                     "startIndex": start_index,
                 }
             )
-            count = page_feature_count(response.content, response.headers.get("Content-Type", ""))
-            logger.info("fetched %s startIndex=%d features=%d", layer.name, start_index, count)
-            yield FetchedPage(layer.name, response.url, response.content, response.headers.get("Content-Type", ""), count)
+            count = page_feature_count(
+                response.content, response.headers.get("Content-Type", "")
+            )
+            logger.info(
+                "fetched %s startIndex=%d features=%d", layer.name, start_index, count
+            )
+            yield FetchedPage(
+                layer.name,
+                response.url,
+                response.content,
+                response.headers.get("Content-Type", ""),
+                count,
+            )
             if count < page_size:
                 return
             start_index += count
@@ -120,5 +160,7 @@ def page_feature_count(content: bytes, content_type: str) -> int:
     root = etree.fromstring(content)
     returned = root.get("numberReturned")
     if returned is None:
-        raise ScraperError("GML FeatureCollection has no numberReturned attribute; cannot page safely")
+        raise ScraperError(
+            "GML FeatureCollection has no numberReturned attribute; cannot page safely"
+        )
     return int(returned)

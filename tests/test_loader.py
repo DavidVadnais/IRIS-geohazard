@@ -24,8 +24,20 @@ def transform(rows, fetched_at):
 def rows(status_s2="stillgelegt"):
     x, y = KASSEL
     return [
-        {"OBJEKT_ID": "S-1", "OBJEKTART": "Schacht", "STATUS": "stillgelegt", "GEFAEHRDUNGSKLASSE": "hoch", "geometry": Point(x, y)},
-        {"OBJEKT_ID": "S-2", "OBJEKTART": "Schacht", "STATUS": status_s2, "GEFAEHRDUNGSKLASSE": None, "geometry": Point(x + 100, y)},
+        {
+            "OBJEKT_ID": "S-1",
+            "OBJEKTART": "Schacht",
+            "STATUS": "stillgelegt",
+            "GEFAEHRDUNGSKLASSE": "hoch",
+            "geometry": Point(x, y),
+        },
+        {
+            "OBJEKT_ID": "S-2",
+            "OBJEKTART": "Schacht",
+            "STATUS": status_s2,
+            "GEFAEHRDUNGSKLASSE": None,
+            "geometry": Point(x + 100, y),
+        },
         {
             "OBJEKT_ID": "H-1",
             "OBJEKTART": "Kaverne",
@@ -33,7 +45,13 @@ def rows(status_s2="stillgelegt"):
             "GEFAEHRDUNGSKLASSE": "mittel",
             "geometry": Polygon([(x, y), (x + 50, y), (x + 50, y + 50), (x, y + 50)]),
         },
-        {"OBJEKT_ID": "N-1", "OBJEKTART": "Schacht", "STATUS": "aktiv", "GEFAEHRDUNGSKLASSE": "hoch", "geometry": None},
+        {
+            "OBJEKT_ID": "N-1",
+            "OBJEKTART": "Schacht",
+            "STATUS": "aktiv",
+            "GEFAEHRDUNGSKLASSE": "hoch",
+            "geometry": None,
+        },
     ]
 
 
@@ -48,7 +66,9 @@ def run(loader, fetched_at, status_s2="stillgelegt"):
         license=SOURCE.license,
     )
     run_id = loader.start_run(metadata)
-    counts = loader.load(run_id, result.staged, result.rejected, fetched_count=len(rows()))
+    counts = loader.load(
+        run_id, result.staged, result.rejected, fetched_count=len(rows())
+    )
     loader.finish_run(run_id, counts)
     return run_id, counts
 
@@ -66,10 +86,17 @@ def snapshot(engine):
 def test_first_load_inserts_and_records_rejects(engine):
     run_id, counts = run(PostgisLoader(engine), datetime(2026, 10, 27, tzinfo=UTC))
 
-    assert (counts.inserted, counts.updated, counts.unchanged, counts.rejected) == (3, 0, 0, 1)
+    assert (counts.inserted, counts.updated, counts.unchanged, counts.rejected) == (
+        3,
+        0,
+        0,
+        1,
+    )
     with engine.connect() as connection:
         rejected = connection.execute(
-            text("SELECT source_feature_id, reason_code, run_id FROM iris_staging.mining_restrictions_rejected")
+            text(
+                "SELECT source_feature_id, reason_code, run_id FROM iris_staging.mining_restrictions_rejected"
+            )
         ).all()
         stored = connection.execute(
             text(
@@ -78,7 +105,9 @@ def test_first_load_inserts_and_records_rejects(engine):
             )
         ).all()
         run_row = connection.execute(
-            text("SELECT status, inserted_count, rejected_count FROM iris_staging.harvest_runs WHERE run_id = :r"),
+            text(
+                "SELECT status, inserted_count, rejected_count FROM iris_staging.harvest_runs WHERE run_id = :r"
+            ),
             {"r": run_id},
         ).one()
     assert rejected == [("N-1", "null_geometry", run_id)]
@@ -106,7 +135,9 @@ def test_changed_feature_is_updated_once(engine):
     first_run, _ = run(loader, datetime(2026, 10, 27, tzinfo=UTC))
     before = {row.source_feature_id: row for row in snapshot(engine)}
 
-    second_run, counts = run(loader, datetime(2026, 10, 28, tzinfo=UTC), status_s2="verfüllt")
+    second_run, counts = run(
+        loader, datetime(2026, 10, 28, tzinfo=UTC), status_s2="verfüllt"
+    )
 
     assert (counts.inserted, counts.updated, counts.unchanged) == (0, 1, 2)
     after = {row.source_feature_id: row for row in snapshot(engine)}

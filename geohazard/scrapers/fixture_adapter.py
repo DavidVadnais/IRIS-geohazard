@@ -44,7 +44,9 @@ class FixtureAdapter(BaseAdapter):
             return response
         response.status_code = 200
         response._content = path.read_bytes()
-        response.headers["Content-Type"] = CONTENT_TYPES.get(path.suffix, "application/octet-stream")
+        response.headers["Content-Type"] = CONTENT_TYPES.get(
+            path.suffix, "application/octet-stream"
+        )
         return response
 
     def close(self) -> None:

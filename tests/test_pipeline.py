@@ -28,21 +28,49 @@ LAYER = WFS_SOURCE.layers[0].name
 HTTP = HttpSettings(max_retries=0, page_size=1000)
 
 
-def mock_wfs(getfeature: dict[int, Path], capabilities: Path = DEMO / "capabilities.xml", status: int = 200) -> None:
-    def add(request: str, body: bytes, content_type: str, extra: dict | None = None, code: int = 200) -> None:
+def mock_wfs(
+    getfeature: dict[int, Path],
+    capabilities: Path = DEMO / "capabilities.xml",
+    status: int = 200,
+) -> None:
+    def add(
+        request: str,
+        body: bytes,
+        content_type: str,
+        extra: dict | None = None,
+        code: int = 200,
+    ) -> None:
         responses.get(
             WFS_URL,
             body=body,
             status=code,
             content_type=content_type,
-            match=[matchers.query_param_matcher({"request": request, **(extra or {})}, strict_match=False)],
+            match=[
+                matchers.query_param_matcher(
+                    {"request": request, **(extra or {})}, strict_match=False
+                )
+            ],
         )
 
     add("GetCapabilities", capabilities.read_bytes(), "application/xml")
-    add("DescribeFeatureType", (DEMO / "describefeaturetype.xsd").read_bytes(), "application/xml")
+    add(
+        "DescribeFeatureType",
+        (DEMO / "describefeaturetype.xsd").read_bytes(),
+        "application/xml",
+    )
     for start_index, path in getfeature.items():
-        content_type = "application/json" if path.suffix == ".json" else "application/gml+xml; version=3.2"
-        add("GetFeature", path.read_bytes(), content_type, {"startIndex": str(start_index)}, status)
+        content_type = (
+            "application/json"
+            if path.suffix == ".json"
+            else "application/gml+xml; version=3.2"
+        )
+        add(
+            "GetFeature",
+            path.read_bytes(),
+            content_type,
+            {"startIndex": str(start_index)},
+            status,
+        )
 
 
 def harvest(engine, http: HttpSettings = HTTP, source=WFS_SOURCE):
@@ -71,12 +99,18 @@ def restrictions(engine):
 def rejected(engine):
     return {
         (row.source_feature_id, row.reason_code)
-        for row in query(engine, "SELECT source_feature_id, reason_code FROM iris_staging.mining_restrictions_rejected")
+        for row in query(
+            engine,
+            "SELECT source_feature_id, reason_code FROM iris_staging.mining_restrictions_rejected",
+        )
     }
 
 
 def runs(engine):
-    return query(engine, "SELECT status, error, access_constraints, fees, data_currency FROM iris_staging.harvest_runs")
+    return query(
+        engine,
+        "SELECT status, error, access_constraints, fees, data_currency FROM iris_staging.harvest_runs",
+    )
 
 
 @responses.activate
@@ -123,9 +157,17 @@ def test_invalid_geometry(engine):
     rows = restrictions(engine)
     assert set(rows) == {"BT-1"}
     assert rows["BT-1"].geom_was_repaired is True
-    assert query(engine, "SELECT bool_and(ST_IsValid(geom)) FROM iris_staging.mining_restrictions")[0][0] is True
+    assert (
+        query(
+            engine,
+            "SELECT bool_and(ST_IsValid(geom)) FROM iris_staging.mining_restrictions",
+        )[0][0]
+        is True
+    )
     assert rejected(engine) == {("CL-1", "invalid_geometry_unrepairable")}
-    [raw_wkt] = query(engine, "SELECT raw_geometry_wkt FROM iris_staging.mining_restrictions_rejected")[0]
+    [raw_wkt] = query(
+        engine, "SELECT raw_geometry_wkt FROM iris_staging.mining_restrictions_rejected"
+    )[0]
     assert raw_wkt.startswith("POLYGON")
 
 
@@ -134,7 +176,9 @@ def test_wrong_crs_is_reprojected(engine):
     mock_wfs({0: WFS / "wrong_crs_31467.json"})
     harvest(engine)
 
-    expected_x, expected_y = Transformer.from_crs(31467, 25832, always_xy=True).transform(3534076.43, 5686872.17)
+    expected_x, expected_y = Transformer.from_crs(
+        31467, 25832, always_xy=True
+    ).transform(3534076.43, 5686872.17)
     row = restrictions(engine)["GK-1"]
     assert row.source_crs == "EPSG:31467"
     assert row.srid == 25832
@@ -160,7 +204,10 @@ def test_missing_classification(engine):
     for feature_id in ("M-1", "M-2", "M-3", "M-4"):
         assert rows[feature_id].hazard_classification is None
         assert rows[feature_id].classification_status == "missing"
-    assert (rows["P-1"].hazard_classification, rows["P-1"].classification_status) == ("gering", "published")
+    assert (rows["P-1"].hazard_classification, rows["P-1"].classification_status) == (
+        "gering",
+        "published",
+    )
     [(defaulted,)] = query(
         engine,
         "SELECT count(*) FROM iris_staging.mining_restrictions "
@@ -180,7 +227,10 @@ def test_duplicate_run_produces_no_changes(engine):
     assert (first.inserted, first.updated) == (4, 0)
     assert (second.inserted, second.updated, second.unchanged) == (0, 0, 4)
     assert restrictions(engine) == before
-    assert query(engine, "SELECT count(*) FROM iris_staging.mining_restrictions")[0][0] == 4
+    assert (
+        query(engine, "SELECT count(*) FROM iris_staging.mining_restrictions")[0][0]
+        == 4
+    )
     assert [r.status for r in runs(engine)] == ["succeeded", "succeeded"]
 
 
@@ -190,13 +240,17 @@ def test_pagination(engine):
     counts = harvest(engine, HttpSettings(max_retries=0, page_size=2))
 
     assert (counts.fetched, counts.inserted) == (5, 5)
-    get_feature_calls = [c for c in responses.calls if "request=GetFeature" in c.request.url]
+    get_feature_calls = [
+        c for c in responses.calls if "request=GetFeature" in c.request.url
+    ]
     assert len(get_feature_calls) == 3
 
 
 @responses.activate
 def test_gml_fallback_when_json_not_offered(engine):
-    mock_wfs({0: WFS / "getfeature.gml"}, capabilities=WFS / "capabilities_gml_only.xml")
+    mock_wfs(
+        {0: WFS / "getfeature.gml"}, capabilities=WFS / "capabilities_gml_only.xml"
+    )
     counts = harvest(engine)
 
     assert (counts.inserted, counts.rejected) == (2, 0)
@@ -204,7 +258,10 @@ def test_gml_fallback_when_json_not_offered(engine):
     assert rows["G-1"].restriction_category == "shaft"
     assert rows["G-2"].restriction_category == "contaminated_land"
     assert rows["G-2"].classification_status == "missing"
-    assert "outputFormat=application%2Fgml%2Bxml" in [c for c in responses.calls if "GetFeature" in c.request.url][0].request.url
+    assert (
+        "outputFormat=application%2Fgml%2Bxml"
+        in next(c for c in responses.calls if "GetFeature" in c.request.url).request.url
+    )
 
 
 @responses.activate
@@ -233,14 +290,26 @@ def test_missing_layer_fails_discovery_visibly(engine):
 @responses.activate
 def test_arcgis_rest_paging_and_metadata(engine):
     source = get_data_source("hlnug_geogefahren_erdfaelle")
-    responses.get(source.url, body=(ARCGIS / "service.json").read_bytes(), content_type="application/json")
-    responses.get(f"{source.url}/20", body=(ARCGIS / "layer_20.json").read_bytes(), content_type="application/json")
+    responses.get(
+        source.url,
+        body=(ARCGIS / "service.json").read_bytes(),
+        content_type="application/json",
+    )
+    responses.get(
+        f"{source.url}/20",
+        body=(ARCGIS / "layer_20.json").read_bytes(),
+        content_type="application/json",
+    )
     for offset in (0, 2):
         responses.get(
             f"{source.url}/20/query",
             body=(ARCGIS / f"query_{offset}.json").read_bytes(),
             content_type="application/json",
-            match=[matchers.query_param_matcher({"resultOffset": str(offset), "outSR": "25832"}, strict_match=False)],
+            match=[
+                matchers.query_param_matcher(
+                    {"resultOffset": str(offset), "outSR": "25832"}, strict_match=False
+                )
+            ],
         )
     scraper = ArcgisRestScraper(source, build_session(HTTP), HTTP)
     counts = harvest_source(source, scraper, PostgisLoader(engine))

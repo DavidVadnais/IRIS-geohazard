@@ -25,9 +25,13 @@ def run_migrations_offline() -> None:
 def run_migrations_online() -> None:
     engine = create_engine(settings.database.sqlalchemy_url())
     with engine.connect() as connection:
-        connection.execute(text(f"CREATE SCHEMA IF NOT EXISTS {settings.staging_schema}"))
+        connection.execute(
+            text(f"CREATE SCHEMA IF NOT EXISTS {settings.staging_schema}")
+        )
         connection.commit()
-        context.configure(connection=connection, version_table_schema=settings.staging_schema)
+        context.configure(
+            connection=connection, version_table_schema=settings.staging_schema
+        )
         with context.begin_transaction():
             context.run_migrations()
     engine.dispose()

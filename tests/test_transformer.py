@@ -7,7 +7,11 @@ from pyproj import Transformer
 from shapely.geometry import GeometryCollection, Point, Polygon
 
 from geohazard.config.data_sources import get_data_source
-from geohazard.transformers.hazard_transformer import FetchContext, HazardTransformer, classify
+from geohazard.transformers.hazard_transformer import (
+    FetchContext,
+    HazardTransformer,
+    classify,
+)
 
 FETCHED_AT = datetime(2026, 10, 27, 12, 0, tzinfo=UTC)
 FRANKFURT_25832 = (477_000.0, 5_552_000.0)
@@ -16,11 +20,22 @@ KASSEL_25832 = (534_000.0, 5_685_000.0)
 
 def demo_transformer(fetched_at: datetime = FETCHED_AT) -> HazardTransformer:
     source = get_data_source("hlnug_fixture_wfs")
-    return HazardTransformer(FetchContext(source=source, layer=source.layers[0], fetched_at=fetched_at))
+    return HazardTransformer(
+        FetchContext(source=source, layer=source.layers[0], fetched_at=fetched_at)
+    )
 
 
-def feature(feature_id, geometry, kind="Schacht", status="stillgelegt", klasse="hoch", **extra):
-    return {"OBJEKT_ID": feature_id, "OBJEKTART": kind, "STATUS": status, "GEFAEHRDUNGSKLASSE": klasse, "geometry": geometry, **extra}
+def feature(
+    feature_id, geometry, kind="Schacht", status="stillgelegt", klasse="hoch", **extra
+):
+    return {
+        "OBJEKT_ID": feature_id,
+        "OBJEKTART": kind,
+        "STATUS": status,
+        "GEFAEHRDUNGSKLASSE": klasse,
+        "geometry": geometry,
+        **extra,
+    }
 
 
 def frame(rows, crs="EPSG:25832"):
@@ -38,9 +53,27 @@ def reasons(result):
 def test_valid_features_are_mapped_with_provenance():
     rows = [
         feature("S-1", Point(*KASSEL_25832)),
-        feature("B-1", square(*FRANKFURT_25832), kind="Bergbauberechtigung", status="erloschen", klasse="gering"),
-        feature("H-1", square(*KASSEL_25832), kind="Kaverne", status="verfüllt", klasse="mittel"),
-        feature("A-1", square(*FRANKFURT_25832), kind="Altablagerung", status="in Bearbeitung", klasse="Keine Gefährdung bekannt"),
+        feature(
+            "B-1",
+            square(*FRANKFURT_25832),
+            kind="Bergbauberechtigung",
+            status="erloschen",
+            klasse="gering",
+        ),
+        feature(
+            "H-1",
+            square(*KASSEL_25832),
+            kind="Kaverne",
+            status="verfüllt",
+            klasse="mittel",
+        ),
+        feature(
+            "A-1",
+            square(*FRANKFURT_25832),
+            kind="Altablagerung",
+            status="in Bearbeitung",
+            klasse="Keine Gefährdung bekannt",
+        ),
     ]
     result = demo_transformer().transform(frame(rows))
 
@@ -68,7 +101,11 @@ def test_valid_features_are_mapped_with_provenance():
 
 def test_null_and_empty_geometry_are_rejected_and_logged(caplog):
     caplog.set_level(logging.INFO)
-    rows = [feature("N-1", None), feature("E-1", Polygon()), feature("OK-1", Point(*KASSEL_25832))]
+    rows = [
+        feature("N-1", None),
+        feature("E-1", Polygon()),
+        feature("OK-1", Point(*KASSEL_25832)),
+    ]
     result = demo_transformer().transform(frame(rows))
 
     assert reasons(result) == {("N-1", "null_geometry"), ("E-1", "empty_geometry")}
@@ -82,7 +119,10 @@ def test_invalid_geometry_is_repaired_or_rejected(caplog):
     x, y = KASSEL_25832
     bow_tie = Polygon([(x, y), (x + 100, y + 100), (x + 100, y), (x, y + 100), (x, y)])
     collapsed = Polygon([(x, y), (x + 10, y + 10), (x + 20, y + 20), (x, y)])
-    rows = [feature("BT-1", bow_tie, kind="Hohlraum"), feature("CL-1", collapsed, kind="Hohlraum")]
+    rows = [
+        feature("BT-1", bow_tie, kind="Hohlraum"),
+        feature("CL-1", collapsed, kind="Hohlraum"),
+    ]
     result = demo_transformer().transform(frame(rows))
 
     assert reasons(result) == {("CL-1", "invalid_geometry_unrepairable")}
@@ -103,7 +143,9 @@ def test_unsupported_geometry_type_is_rejected():
 def test_gauss_krueger_input_is_reprojected_to_25832():
     to_31467 = Transformer.from_crs(25832, 31467, always_xy=True)
     gk_x, gk_y = to_31467.transform(*KASSEL_25832)
-    result = demo_transformer().transform(frame([feature("GK-1", Point(gk_x, gk_y))], crs="EPSG:31467"))
+    result = demo_transformer().transform(
+        frame([feature("GK-1", Point(gk_x, gk_y))], crs="EPSG:31467")
+    )
 
     [record] = result.staged
     assert record.source_crs == "EPSG:31467"
@@ -112,13 +154,17 @@ def test_gauss_krueger_input_is_reprojected_to_25832():
 
 
 def test_missing_crs_is_rejected_not_assumed():
-    result = demo_transformer().transform(frame([feature("NC-1", Point(*KASSEL_25832))], crs=None))
+    result = demo_transformer().transform(
+        frame([feature("NC-1", Point(*KASSEL_25832))], crs=None)
+    )
     assert reasons(result) == {("NC-1", "unknown_crs")}
     assert result.staged == []
 
 
 def test_unaccepted_crs_is_rejected():
-    result = demo_transformer().transform(frame([feature("WM-1", Point(966_000, 6_464_000))], crs="EPSG:3857"))
+    result = demo_transformer().transform(
+        frame([feature("WM-1", Point(966_000, 6_464_000))], crs="EPSG:3857")
+    )
     assert reasons(result) == {("WM-1", "unknown_crs")}
 
 
@@ -130,9 +176,13 @@ def test_swapped_axis_wgs84_is_caught_as_out_of_region():
     assert reasons(result) == {("SW-1", "out_of_region")}
 
 
-@pytest.mark.parametrize("raw", [None, "", "  ", "unbekannt", "Unbekannt", "k.A.", "n.b.", "-", float("nan")])
+@pytest.mark.parametrize(
+    "raw", [None, "", "  ", "unbekannt", "Unbekannt", "k.A.", "n.b.", "-", float("nan")]
+)
 def test_missing_classification_is_null_and_never_safe(raw):
-    result = demo_transformer().transform(frame([feature("MC-1", Point(*KASSEL_25832), klasse=raw)]))
+    result = demo_transformer().transform(
+        frame([feature("MC-1", Point(*KASSEL_25832), klasse=raw)])
+    )
 
     [record] = result.staged
     assert record.hazard_classification is None
@@ -148,8 +198,17 @@ def test_classification_vocabulary_handling():
 
 def test_live_layer_without_classification_field_is_missing():
     source = get_data_source("hlnug_geogefahren_erdfaelle")
-    transformer = HazardTransformer(FetchContext(source=source, layer=source.layers[0], fetched_at=FETCHED_AT))
-    rows = [{"OBJECTID": 7, "AMT_NR": 4711, "TS_FLAE": 12.5, "geometry": Point(*KASSEL_25832)}]
+    transformer = HazardTransformer(
+        FetchContext(source=source, layer=source.layers[0], fetched_at=FETCHED_AT)
+    )
+    rows = [
+        {
+            "OBJECTID": 7,
+            "AMT_NR": 4711,
+            "TS_FLAE": 12.5,
+            "geometry": Point(*KASSEL_25832),
+        }
+    ]
     [record] = transformer.transform(frame(rows)).staged
 
     assert record.restriction_category == "sinkhole_subsidence"
@@ -179,9 +238,23 @@ def test_unmapped_category_missing_id_and_duplicate_id_are_rejected():
 def test_content_hash_is_stable_across_runs_and_sensitive_to_changes():
     rows = [feature("S-1", square(*KASSEL_25832))]
     first = demo_transformer(FETCHED_AT).transform(frame(rows)).staged[0]
-    second = demo_transformer(datetime(2026, 11, 1, tzinfo=UTC)).transform(frame(rows)).staged[0]
-    changed = demo_transformer().transform(frame([feature("S-1", square(*KASSEL_25832), status="verfüllt")])).staged[0]
-    moved = demo_transformer().transform(frame([feature("S-1", square(KASSEL_25832[0] + 1, KASSEL_25832[1]))])).staged[0]
+    second = (
+        demo_transformer(datetime(2026, 11, 1, tzinfo=UTC))
+        .transform(frame(rows))
+        .staged[0]
+    )
+    changed = (
+        demo_transformer()
+        .transform(frame([feature("S-1", square(*KASSEL_25832), status="verfüllt")]))
+        .staged[0]
+    )
+    moved = (
+        demo_transformer()
+        .transform(
+            frame([feature("S-1", square(KASSEL_25832[0] + 1, KASSEL_25832[1]))])
+        )
+        .staged[0]
+    )
 
     assert first.content_hash == second.content_hash
     assert changed.content_hash != first.content_hash

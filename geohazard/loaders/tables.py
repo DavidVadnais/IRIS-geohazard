@@ -1,5 +1,16 @@
 from geoalchemy2 import Geometry
-from sqlalchemy import ARRAY, BigInteger, Boolean, Column, DateTime, Integer, MetaData, Table, Text, Uuid
+from sqlalchemy import (
+    ARRAY,
+    BigInteger,
+    Boolean,
+    Column,
+    DateTime,
+    Integer,
+    MetaData,
+    Table,
+    Text,
+    Uuid,
+)
 from sqlalchemy.dialects.postgresql import JSONB
 
 STAGING_SCHEMA = "iris_staging"

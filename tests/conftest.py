@@ -20,10 +20,14 @@ STAGING_TABLES = (
 def _use_test_database() -> str:
     main_settings = get_settings()
     test_name = main_settings.database.name + TEST_DB_SUFFIX
-    admin = create_engine(main_settings.database.sqlalchemy_url(), isolation_level="AUTOCOMMIT")
+    admin = create_engine(
+        main_settings.database.sqlalchemy_url(), isolation_level="AUTOCOMMIT"
+    )
     try:
         with admin.connect() as connection:
-            exists = connection.execute(text("SELECT 1 FROM pg_database WHERE datname = :n"), {"n": test_name}).scalar()
+            exists = connection.execute(
+                text("SELECT 1 FROM pg_database WHERE datname = :n"), {"n": test_name}
+            ).scalar()
             if not exists:
                 connection.execute(text(f'CREATE DATABASE "{test_name}"'))
     finally:
@@ -48,5 +52,7 @@ def migrated_engine():
 @pytest.fixture
 def engine(migrated_engine):
     with migrated_engine.begin() as connection:
-        connection.execute(text(f"TRUNCATE {', '.join(STAGING_TABLES)} RESTART IDENTITY CASCADE"))
+        connection.execute(
+            text(f"TRUNCATE {', '.join(STAGING_TABLES)} RESTART IDENTITY CASCADE")
+        )
     return migrated_engine

@@ -58,7 +58,9 @@ class Settings(BaseSettings):
         file_secret_settings: PydanticBaseSettingsSource,
     ) -> tuple[PydanticBaseSettingsSource, ...]:
         yaml_path = Path(os.environ.get(CONFIG_PATH_ENV, DEFAULT_CONFIG_PATH))
-        yaml_settings = YamlConfigSettingsSource(settings_cls, yaml_file=yaml_path if yaml_path.exists() else None)
+        yaml_settings = YamlConfigSettingsSource(
+            settings_cls, yaml_file=yaml_path if yaml_path.exists() else None
+        )
         return init_settings, env_settings, yaml_settings, file_secret_settings
 
 

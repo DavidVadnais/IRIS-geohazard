@@ -7,7 +7,12 @@ from pathlib import Path
 import requests
 from sqlalchemy import create_engine
 
-from geohazard.config.data_sources import DataSource, HarvestMode, SourceKind, get_data_source
+from geohazard.config.data_sources import (
+    DataSource,
+    HarvestMode,
+    SourceKind,
+    get_data_source,
+)
 from geohazard.config.settings import Settings, get_settings
 from geohazard.loaders.postgis_loader import LoadCounts, PostgisLoader, RunMetadata
 from geohazard.logging_config import configure_logging
@@ -23,7 +28,9 @@ logger = logging.getLogger("geohazard.runner")
 DEFAULT_FIXTURE_DIR = Path("fixtures/hlnug_demo")
 
 
-def build_scraper(source: DataSource, session: requests.Session, settings: Settings) -> Scraper:
+def build_scraper(
+    source: DataSource, session: requests.Session, settings: Settings
+) -> Scraper:
     if source.kind is SourceKind.WFS:
         return WfsScraper(source, session, settings.http)
     return ArcgisRestScraper(source, session, settings.http)
@@ -42,11 +49,15 @@ def config_metadata(source: DataSource) -> RunMetadata:
     )
 
 
-def harvest_source(source: DataSource, scraper: Scraper, loader: PostgisLoader) -> LoadCounts:
+def harvest_source(
+    source: DataSource, scraper: Scraper, loader: PostgisLoader
+) -> LoadCounts:
     try:
         discovered = scraper.discover()
     except Exception as exc:
-        loader.fail_run(loader.start_run(config_metadata(source)), f"discovery failed: {exc}")
+        loader.fail_run(
+            loader.start_run(config_metadata(source)), f"discovery failed: {exc}"
+        )
         raise
 
     run_id = loader.start_run(
@@ -70,7 +81,9 @@ def harvest_source(source: DataSource, scraper: Scraper, loader: PostgisLoader) 
             fetched_at = datetime.now(UTC)
             frame = parse_pages(scraper.fetch_layer(layer))
             fetched += len(frame)
-            result = HazardTransformer(FetchContext(source, layer, fetched_at)).transform(frame)
+            result = HazardTransformer(
+                FetchContext(source, layer, fetched_at)
+            ).transform(frame)
             staged.extend(result.staged)
             rejected.extend(result.rejected)
         counts = loader.load(run_id, staged, rejected, fetched_count=fetched)
@@ -82,9 +95,18 @@ def harvest_source(source: DataSource, scraper: Scraper, loader: PostgisLoader) 
 
 
 def parse_args(argv: list[str] | None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Harvest Hesse mining/geohazard restrictions into iris_staging")
-    parser.add_argument("--source", action="append", dest="sources", help="data source key (repeatable)")
-    parser.add_argument("--fixture-dir", type=Path, default=DEFAULT_FIXTURE_DIR, help="directory served for fixture sources")
+    parser = argparse.ArgumentParser(
+        description="Harvest Hesse mining/geohazard restrictions into iris_staging"
+    )
+    parser.add_argument(
+        "--source", action="append", dest="sources", help="data source key (repeatable)"
+    )
+    parser.add_argument(
+        "--fixture-dir",
+        type=Path,
+        default=DEFAULT_FIXTURE_DIR,
+        help="directory served for fixture sources",
+    )
     return parser.parse_args(argv)
 
 
@@ -99,9 +121,15 @@ def main(argv: list[str] | None = None) -> int:
         session = build_session(settings.http)
         if source.mode is HarvestMode.FIXTURE:
             mount_fixture(session, source.url, args.fixture_dir)
-            logger.warning("source %s runs in FIXTURE mode from %s: synthetic data, not real HLNUG data", key, args.fixture_dir)
+            logger.warning(
+                "source %s runs in FIXTURE mode from %s: synthetic data, not real HLNUG data",
+                key,
+                args.fixture_dir,
+            )
         try:
-            counts = harvest_source(source, build_scraper(source, session, settings), loader)
+            counts = harvest_source(
+                source, build_scraper(source, session, settings), loader
+            )
             logger.info("source %s done: %s", key, counts)
         except Exception:
             failures += 1

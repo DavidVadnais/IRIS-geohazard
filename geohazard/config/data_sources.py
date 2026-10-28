@@ -21,13 +21,19 @@ class RestrictionCategory(StrEnum):
     EXTRACTION_SITE = "extraction_site"
 
 
-HLNUG_LICENSE_ASSUMED = "CC-BY-4.0 (assumed, per HLNUG INSPIRE Nutzungsbedingungen Stand Mai 2025)"
-HLNUG_ATTRIBUTION = "© Hessisches Landesamt für Naturschutz, Umwelt und Geologie (HLNUG)"
+HLNUG_LICENSE_ASSUMED = (
+    "CC-BY-4.0 (assumed, per HLNUG INSPIRE Nutzungsbedingungen Stand Mai 2025)"
+)
+HLNUG_ATTRIBUTION = (
+    "© Hessisches Landesamt für Naturschutz, Umwelt und Geologie (HLNUG)"
+)
 HLNUG_ACCESS_CONSTRAINTS = "noLimitations; keine rechtsverbindliche Auskunft"
 
 HESSE_BBOX_25832 = (400_000.0, 5_460_000.0, 600_000.0, 5_740_000.0)
 
-MISSING_CLASSIFICATION_TOKENS = frozenset({"", "unbekannt", "unknown", "k.a.", "k. a.", "n.b.", "n. b.", "-", "null", "none"})
+MISSING_CLASSIFICATION_TOKENS = frozenset(
+    {"", "unbekannt", "unknown", "k.a.", "k. a.", "n.b.", "n. b.", "-", "null", "none"}
+)
 
 
 @dataclass(frozen=True)
@@ -41,7 +47,14 @@ class LayerConfig:
     status_field: str | None = None
     classification_field: str | None = None
     allowed_geometry_types: frozenset[str] = frozenset(
-        {"Point", "MultiPoint", "LineString", "MultiLineString", "Polygon", "MultiPolygon"}
+        {
+            "Point",
+            "MultiPoint",
+            "LineString",
+            "MultiLineString",
+            "Polygon",
+            "MultiPolygon",
+        }
     )
 
 
@@ -90,7 +103,9 @@ DEMO_STATUS_MAP = {
     "altlastverdaechtig": "suspected",
 }
 
-DEMO_CLASSIFICATION_VOCABULARY = frozenset({"hoch", "mittel", "gering", "keine gefaehrdung bekannt"})
+DEMO_CLASSIFICATION_VOCABULARY = frozenset(
+    {"hoch", "mittel", "gering", "keine gefaehrdung bekannt"}
+)
 
 DATA_SOURCES: dict[str, DataSource] = {
     "hlnug_fixture_wfs": DataSource(
@@ -164,4 +179,6 @@ def get_data_source(key: str) -> DataSource:
     try:
         return DATA_SOURCES[key]
     except KeyError as exc:
-        raise ValueError(f"unknown data source {key!r}; known: {sorted(DATA_SOURCES)}") from exc
+        raise ValueError(
+            f"unknown data source {key!r}; known: {sorted(DATA_SOURCES)}"
+        ) from exc

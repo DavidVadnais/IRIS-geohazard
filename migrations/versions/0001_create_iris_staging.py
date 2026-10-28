@@ -4,6 +4,7 @@ Revision ID: 0001
 Revises:
 Create Date: 2026-10-27
 """
+
 from alembic import op
 
 revision = "0001"
@@ -11,7 +12,14 @@ down_revision = None
 branch_labels = None
 depends_on = None
 
-CATEGORIES = ("mine_right", "shaft", "cavity", "contaminated_land", "sinkhole_subsidence", "extraction_site")
+CATEGORIES = (
+    "mine_right",
+    "shaft",
+    "cavity",
+    "contaminated_land",
+    "sinkhole_subsidence",
+    "extraction_site",
+)
 REJECT_REASONS = (
     "null_geometry",
     "empty_geometry",
@@ -96,7 +104,9 @@ def upgrade() -> None:
         )
         """
     )
-    op.execute("CREATE INDEX mining_restrictions_geom_gist ON iris_staging.mining_restrictions USING gist (geom)")
+    op.execute(
+        "CREATE INDEX mining_restrictions_geom_gist ON iris_staging.mining_restrictions USING gist (geom)"
+    )
     op.execute(
         "CREATE INDEX mining_restrictions_category_idx ON iris_staging.mining_restrictions (restriction_category)"
     )

@@ -10,3 +10,9 @@ include = ["geohazard*"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 markers = ["db: requires a reachable PostGIS database"]
+
+[tool.ruff]
+required-version = "==0.16.7"
+target-version = "py315"
+line-length = 88
+extend-exclude = ["visualize/output", "visualize/data"]

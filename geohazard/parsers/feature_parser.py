@@ -39,9 +39,13 @@ def parse_geojson(content: bytes) -> gpd.GeoDataFrame:
         except (ValueError, TypeError, AttributeError) as exc:
             geometries.append(None)
             row[GEOMETRY_ERROR_COLUMN] = str(exc)
-            logger.warning("unparseable geometry for feature %s: %s", item.get("id"), exc)
+            logger.warning(
+                "unparseable geometry for feature %s: %s", item.get("id"), exc
+            )
         properties.append(row)
-    return gpd.GeoDataFrame(properties, geometry=gpd.GeoSeries(geometries), crs=_geojson_crs(collection))
+    return gpd.GeoDataFrame(
+        properties, geometry=gpd.GeoSeries(geometries), crs=_geojson_crs(collection)
+    )
 
 
 def parse_gml(content: bytes) -> gpd.GeoDataFrame:
@@ -59,7 +63,11 @@ def parse_pages(pages: Iterable[FetchedPage]) -> gpd.GeoDataFrame:
     frames = [frame for frame in frames if len(frame)] or frames[:1]
     if not frames:
         return gpd.GeoDataFrame(geometry=gpd.GeoSeries([]))
-    crs_values = {frame.crs.to_string() if frame.crs is not None else None for frame in frames}
+    crs_values = {
+        frame.crs.to_string() if frame.crs is not None else None for frame in frames
+    }
     if len(crs_values) > 1:
         raise ParserError(f"pages of one layer declared different CRS: {crs_values}")
-    return gpd.GeoDataFrame(pd.concat(frames, ignore_index=True), geometry="geometry", crs=frames[0].crs)
+    return gpd.GeoDataFrame(
+        pd.concat(frames, ignore_index=True), geometry="geometry", crs=frames[0].crs
+    )

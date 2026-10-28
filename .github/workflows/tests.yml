@@ -10,11 +10,23 @@ permissions:
   contents: read
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: ruff check
+        run: pipx run ruff==0.16.7 check --output-format=github
+
+      - name: ruff format
+        run: pipx run ruff==0.16.7 format --check --diff
+
   pytest:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Create .env with a throwaway password
         run: |

@@ -92,7 +92,9 @@ def fold_text(value: str) -> str:
     for umlaut, ascii_form in replacements.items():
         lowered = lowered.replace(umlaut, ascii_form)
     decomposed = unicodedata.normalize("NFKD", lowered)
-    return " ".join("".join(ch for ch in decomposed if not unicodedata.combining(ch)).split())
+    return " ".join(
+        "".join(ch for ch in decomposed if not unicodedata.combining(ch)).split()
+    )
 
 
 def json_safe(value: Any) -> Any:
@@ -134,21 +136,35 @@ def feature_url(source: DataSource, layer: LayerConfig, feature_id: str) -> str:
             "resourceId": feature_id,
         }
         return f"{source.url}?{urlencode(params)}"
-    params = {"where": f"{layer.id_field}={feature_id}", "outFields": "*", "f": "geojson"}
+    params = {
+        "where": f"{layer.id_field}={feature_id}",
+        "outFields": "*",
+        "f": "geojson",
+    }
     return f"{source.url}/{layer.name}/query?{urlencode(params)}"
 
 
 def content_hash(record_fields: dict[str, Any], geometry: BaseGeometry) -> str:
     payload = dict(record_fields)
-    payload["geom_wkb"] = shapely.to_wkb(shapely.normalize(geometry), hex=True, output_dimension=2)
-    canonical = json.dumps(payload, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
+    payload["geom_wkb"] = shapely.to_wkb(
+        shapely.normalize(geometry), hex=True, output_dimension=2
+    )
+    canonical = json.dumps(
+        payload, sort_keys=True, ensure_ascii=False, separators=(",", ":")
+    )
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
-def _resolve_category(layer: LayerConfig, attributes: dict[str, Any]) -> RestrictionCategory | None:
+def _resolve_category(
+    layer: LayerConfig, attributes: dict[str, Any]
+) -> RestrictionCategory | None:
     if layer.fixed_category is not None:
         return layer.fixed_category
-    raw = text_or_none(attributes.get(layer.category_field)) if layer.category_field else None
+    raw = (
+        text_or_none(attributes.get(layer.category_field))
+        if layer.category_field
+        else None
+    )
     return layer.category_map.get(fold_text(raw)) if raw else None
 
 
@@ -162,7 +178,12 @@ def _repair(geometry: BaseGeometry, allowed: frozenset[str]) -> BaseGeometry | N
 def _within_hesse(geometry: BaseGeometry) -> bool:
     min_x, min_y, max_x, max_y = geometry.bounds
     hesse_min_x, hesse_min_y, hesse_max_x, hesse_max_y = HESSE_BBOX_25832
-    return min_x >= hesse_min_x and min_y >= hesse_min_y and max_x <= hesse_max_x and max_y <= hesse_max_y
+    return (
+        min_x >= hesse_min_x
+        and min_y >= hesse_min_y
+        and max_x <= hesse_max_x
+        and max_y <= hesse_max_y
+    )
 
 
 class HazardTransformer:
@@ -179,69 +200,121 @@ class HazardTransformer:
         candidates: list[_Candidate] = []
 
         for _, row in frame.iterrows():
-            attributes = {key: json_safe(value) for key, value in row.items() if key != frame.geometry.name}
+            attributes = {
+                key: json_safe(value)
+                for key, value in row.items()
+                if key != frame.geometry.name
+            }
             geometry = row[frame.geometry.name]
             feature_id = text_or_none(attributes.get(self.layer.id_field))
             raw_wkt = geometry.wkt if isinstance(geometry, BaseGeometry) else None
 
-            def reject(reason: str, detail: str) -> None:
-                result.rejected.append(self._rejected(feature_id, reason, detail, attributes, raw_wkt))
-
-            if feature_id is None:
-                reject("missing_feature_id", f"id field {self.layer.id_field!r} is null or empty")
-                continue
-            if feature_id in seen_ids:
-                reject("duplicate_feature_id", "feature id already seen earlier in this fetch; first occurrence kept")
-                continue
-            seen_ids.add(feature_id)
-            if crs_problem is not None:
-                reject("unknown_crs", crs_problem)
-                continue
-            category = _resolve_category(self.layer, attributes)
-            if category is None:
-                raw_category = attributes.get(self.layer.category_field) if self.layer.category_field else None
-                reject("unmapped_category", f"category value {raw_category!r} has no mapping")
-                continue
-            if not isinstance(geometry, BaseGeometry):
-                reject("null_geometry", "geometry is null")
-                continue
-            if geometry.is_empty:
-                reject("empty_geometry", "geometry is empty")
-                continue
-            if geometry.geom_type not in self.layer.allowed_geometry_types:
-                reject("unsupported_geometry_type", f"geometry type {geometry.geom_type} is not allowed for this layer")
-                continue
-            repaired = False
-            if not geometry.is_valid:
-                reason = shapely.is_valid_reason(geometry)
-                fixed = _repair(geometry, self.layer.allowed_geometry_types)
-                if fixed is None:
-                    reject("invalid_geometry_unrepairable", f"invalid geometry ({reason}); make_valid gave no usable result")
-                    continue
-                logger.info("repaired invalid geometry source=%s feature=%s reason=%s", self.source.source, feature_id, reason)
-                geometry, repaired = fixed, True
-            candidates.append(_Candidate(feature_id, category, attributes, geometry, raw_wkt, repaired))
+            outcome = self._screen_row(
+                feature_id, attributes, geometry, raw_wkt, seen_ids, crs_problem
+            )
+            if isinstance(outcome, _Candidate):
+                candidates.append(outcome)
+            else:
+                reason, detail = outcome
+                result.rejected.append(
+                    self._rejected(feature_id, reason, detail, attributes, raw_wkt)
+                )
 
         self._finalise(candidates, source_epsg, result)
         return result
 
-    def _crs_problem(self, frame: gpd.GeoDataFrame, source_epsg: int | None) -> str | None:
+    def _screen_row(
+        self,
+        feature_id: str | None,
+        attributes: dict[str, Any],
+        geometry: Any,
+        raw_wkt: str | None,
+        seen_ids: set[str],
+        crs_problem: str | None,
+    ) -> _Candidate | tuple[str, str]:
+        if feature_id is None:
+            return (
+                "missing_feature_id",
+                f"id field {self.layer.id_field!r} is null or empty",
+            )
+        if feature_id in seen_ids:
+            return (
+                "duplicate_feature_id",
+                "feature id already seen earlier in this fetch; first occurrence kept",
+            )
+        seen_ids.add(feature_id)
+        if crs_problem is not None:
+            return ("unknown_crs", crs_problem)
+        category = _resolve_category(self.layer, attributes)
+        if category is None:
+            raw_category = (
+                attributes.get(self.layer.category_field)
+                if self.layer.category_field
+                else None
+            )
+            return (
+                "unmapped_category",
+                f"category value {raw_category!r} has no mapping",
+            )
+        if not isinstance(geometry, BaseGeometry):
+            return ("null_geometry", "geometry is null")
+        if geometry.is_empty:
+            return ("empty_geometry", "geometry is empty")
+        if geometry.geom_type not in self.layer.allowed_geometry_types:
+            return (
+                "unsupported_geometry_type",
+                f"geometry type {geometry.geom_type} is not allowed for this layer",
+            )
+        repaired = False
+        if not geometry.is_valid:
+            reason = shapely.is_valid_reason(geometry)
+            fixed = _repair(geometry, self.layer.allowed_geometry_types)
+            if fixed is None:
+                return (
+                    "invalid_geometry_unrepairable",
+                    f"invalid geometry ({reason}); make_valid gave no usable result",
+                )
+            logger.info(
+                "repaired invalid geometry source=%s feature=%s reason=%s",
+                self.source.source,
+                feature_id,
+                reason,
+            )
+            geometry, repaired = fixed, True
+        return _Candidate(feature_id, category, attributes, geometry, raw_wkt, repaired)
+
+    def _crs_problem(
+        self, frame: gpd.GeoDataFrame, source_epsg: int | None
+    ) -> str | None:
         if frame.crs is None:
             return "response declared no CRS; refusing to assume one"
         if source_epsg not in ACCEPTED_SOURCE_EPSG:
             return f"CRS {frame.crs.to_string()} is not in accepted set {sorted(ACCEPTED_SOURCE_EPSG)}"
         return None
 
-    def _finalise(self, candidates: list[_Candidate], source_epsg: int | None, result: TransformResult) -> None:
+    def _finalise(
+        self,
+        candidates: list[_Candidate],
+        source_epsg: int | None,
+        result: TransformResult,
+    ) -> None:
         if not candidates:
             return
-        projected = gpd.GeoSeries([c.geometry for c in candidates], crs=f"EPSG:{source_epsg}").to_crs(epsg=TARGET_EPSG)
+        projected = gpd.GeoSeries(
+            [c.geometry for c in candidates], crs=f"EPSG:{source_epsg}"
+        ).to_crs(epsg=TARGET_EPSG)
         source_crs = f"EPSG:{source_epsg}"
         for candidate, geometry in zip(candidates, projected, strict=True):
             if not _within_hesse(geometry):
                 detail = f"bounds {tuple(round(b) for b in geometry.bounds)} in EPSG:{TARGET_EPSG} fall outside Hesse"
                 result.rejected.append(
-                    self._rejected(candidate.feature_id, "out_of_region", detail, candidate.attributes, candidate.raw_wkt)
+                    self._rejected(
+                        candidate.feature_id,
+                        "out_of_region",
+                        detail,
+                        candidate.attributes,
+                        candidate.raw_wkt,
+                    )
                 )
                 continue
             geometry = shapely.set_precision(geometry, PRECISION_METERS)
@@ -258,20 +331,33 @@ class HazardTransformer:
                 continue
             result.staged.append(self._staged(candidate, geometry, source_crs))
 
-    def _staged(self, candidate: _Candidate, geometry: BaseGeometry, source_crs: str) -> StagedRecord:
+    def _staged(
+        self, candidate: _Candidate, geometry: BaseGeometry, source_crs: str
+    ) -> StagedRecord:
         attributes = candidate.attributes
         classification, classification_status = (
-            classify(attributes.get(self.layer.classification_field), self.source.classification_vocabulary)
+            classify(
+                attributes.get(self.layer.classification_field),
+                self.source.classification_vocabulary,
+            )
             if self.layer.classification_field
             else (None, "missing")
         )
-        status_raw = text_or_none(attributes.get(self.layer.status_field)) if self.layer.status_field else None
+        status_raw = (
+            text_or_none(attributes.get(self.layer.status_field))
+            if self.layer.status_field
+            else None
+        )
         mapped = {
             "source": self.source.source,
             "source_feature_id": candidate.feature_id,
             "restriction_category": candidate.category.value,
-            "hazard_type": text_or_none(attributes.get(self.layer.type_field)) if self.layer.type_field else None,
-            "status": self.source.status_map.get(fold_text(status_raw)) if status_raw else None,
+            "hazard_type": text_or_none(attributes.get(self.layer.type_field))
+            if self.layer.type_field
+            else None,
+            "status": self.source.status_map.get(fold_text(status_raw))
+            if status_raw
+            else None,
             "status_raw": status_raw,
             "hazard_classification": classification,
             "classification_status": classification_status,
@@ -307,7 +393,9 @@ class HazardTransformer:
             detail,
         )
         source_url = (
-            feature_url(self.source, self.layer, feature_id) if feature_id is not None else self.source.url
+            feature_url(self.source, self.layer, feature_id)
+            if feature_id is not None
+            else self.source.url
         )
         return RejectedRecord(
             source=self.source.source,

@@ -70,7 +70,9 @@ def build_session(http: HttpSettings) -> requests.Session:
     return session
 
 
-def get(session: requests.Session, url: str, params: dict[str, str | int], timeout: float) -> requests.Response:
+def get(
+    session: requests.Session, url: str, params: dict[str, str | int], timeout: float
+) -> requests.Response:
     response = session.get(url, params=params, timeout=timeout)
     if response.status_code != 200:
         raise ScraperError(f"GET {response.url} returned HTTP {response.status_code}")
