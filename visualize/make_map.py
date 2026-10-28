@@ -15,10 +15,15 @@ from sqlalchemy import create_engine
 
 from geohazard.config.settings import get_settings
 from geohazard.logging_config import configure_logging
+from visualize import github_maps
 
 logger = logging.getLogger("visualize.make_map")
 
 HERE = Path(__file__).resolve().parent
+REPO_ROOT = HERE.parent
+DEFAULT_GITHUB_MAP_DIR = REPO_ROOT / "docs" / "map"
+DEFAULT_README = REPO_ROOT / "README.md"
+README_MAP_BLOCKS = ["parcel_297_example", "synthetic_wfs_demonstrator"]
 DEFAULT_OUTPUT = HERE / "output" / "hesse_restrictions_map.html"
 DEFAULT_STATES_CACHE = HERE / "data" / "vg2500_lan.geojson"
 DEFAULT_PARCELS = HERE / "example_parcels.geojson"
@@ -200,11 +205,19 @@ def load_rejected(engine) -> gpd.GeoDataFrame:
     return frame
 
 
-def load_parcels(path: Path) -> gpd.GeoDataFrame:
+def read_parcels(path: Path) -> gpd.GeoDataFrame:
     if not path.is_file():
         logger.warning("example parcels file %s not found; parcel layer skipped", path)
-        return gpd.GeoDataFrame(columns=["geometry"], geometry="geometry", crs=4326)
-    parcels = gpd.read_file(path).to_crs(4326)
+        return gpd.GeoDataFrame(
+            columns=["flurstueck", "geometry"], geometry="geometry", crs=4326
+        )
+    return gpd.read_file(path).to_crs(4326)
+
+
+def parcels_for_popups(raw: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
+    if raw.empty:
+        return raw
+    parcels = raw.copy()
     parcels["source_link"] = [
         f'<a href="{html.escape(url)}?SERVICE=WFS&amp;REQUEST=GetCapabilities&amp;VERSION=2.0.0" '
         'target="_blank">GetCapabilities</a>'
@@ -298,11 +311,13 @@ def add_rejected_layer(fmap: folium.Map, rejected: gpd.GeoDataFrame) -> None:
     group.add_to(fmap)
 
 
-def add_parcels_layer(fmap: folium.Map, parcels: gpd.GeoDataFrame) -> None:
+def add_parcels_layer(
+    fmap: folium.Map, parcels: gpd.GeoDataFrame, show: bool = False
+) -> None:
     if parcels.empty:
         return
     label, color = PARCELS_STYLE
-    group = folium.FeatureGroup(name=f"{label} ({len(parcels)})", show=False)
+    group = folium.FeatureGroup(name=f"{label} ({len(parcels)})", show=show)
     folium.GeoJson(
         parcels[[field for field, _ in PARCEL_POPUP_FIELDS] + ["geometry"]],
         style_function=lambda _: {
@@ -345,7 +360,15 @@ def add_legend(fmap: folium.Map) -> None:
     fmap.get_root().html.add_child(folium.Element(legend))
 
 
-def build_map(states, restrictions, rejected, parcels, focus_state: str) -> folium.Map:
+def build_map(
+    states,
+    restrictions,
+    rejected,
+    parcels,
+    focus_state: str,
+    show_parcels: bool = False,
+    zoom_bounds: list[list[float]] | None = None,
+) -> folium.Map:
     fmap = folium.Map(tiles=None, prefer_canvas=True, control_scale=True)
     for variant, name in (
         ("web", "TopPlusOpen colour (BKG)"),
@@ -361,12 +384,14 @@ def build_map(states, restrictions, rejected, parcels, focus_state: str) -> foli
     if not restrictions.empty:
         add_category_layers(fmap, restrictions)
     add_rejected_layer(fmap, rejected)
-    add_parcels_layer(fmap, parcels)
+    add_parcels_layer(fmap, parcels, show=show_parcels or zoom_bounds is not None)
     folium.LayerControl(collapsed=False).add_to(fmap)
     Fullscreen().add_to(fmap)
     add_legend(fmap)
     focus = states[states["gen"] == focus_state]
-    if focus.empty:
+    if zoom_bounds is not None:
+        fmap.fit_bounds(zoom_bounds, padding=(60, 60))
+    elif focus.empty:
         fmap.fit_bounds(GERMANY_BOUNDS)
     else:
         min_x, min_y, max_x, max_y = focus.total_bounds
@@ -396,6 +421,23 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
         action="store_true",
         help="re-download state boundaries from BKG",
     )
+    parser.add_argument(
+        "--show-parcels",
+        action="store_true",
+        help="show the example parcels layer when the map opens",
+    )
+    parser.add_argument(
+        "--zoom-to-parcel",
+        metavar="FLURSTUECK",
+        help="open the map zoomed to this example parcel (e.g. 297); implies --show-parcels",
+    )
+    parser.add_argument(
+        "--github-maps",
+        action="store_true",
+        help="also write GeoJSON maps for GitHub to docs/map/ and refresh the README map blocks",
+    )
+    parser.add_argument("--github-map-dir", type=Path, default=DEFAULT_GITHUB_MAP_DIR)
+    parser.add_argument("--readme", type=Path, default=DEFAULT_README)
     return parser.parse_args(argv)
 
 
@@ -411,9 +453,22 @@ def main(argv: list[str] | None = None) -> int:
             "unknown state %r; choose one of %s", args.state, sorted(states["gen"])
         )
         return 1
+    raw_parcels = read_parcels(args.parcels)
+    zoom_bounds = None
+    if args.zoom_to_parcel is not None:
+        target = raw_parcels[raw_parcels["flurstueck"] == args.zoom_to_parcel]
+        if target.empty:
+            logger.error(
+                "unknown parcel %r; choose one of %s",
+                args.zoom_to_parcel,
+                sorted(raw_parcels["flurstueck"]),
+            )
+            return 1
+        min_x, min_y, max_x, max_y = target.total_bounds
+        zoom_bounds = [[min_y, min_x], [max_y, max_x]]
+    parcels = parcels_for_popups(raw_parcels)
     restrictions = load_restrictions(engine)
     rejected = load_rejected(engine)
-    parcels = load_parcels(args.parcels)
     logger.info(
         "restrictions=%d by category=%s rejected_with_geometry=%d parcels=%d",
         len(restrictions),
@@ -425,8 +480,26 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    build_map(states, restrictions, rejected, parcels, args.state).save(args.output)
+    build_map(
+        states,
+        restrictions,
+        rejected,
+        parcels,
+        args.state,
+        show_parcels=args.show_parcels,
+        zoom_bounds=zoom_bounds,
+    ).save(args.output)
     logger.info("map written to %s", args.output)
+
+    if args.github_maps:
+        collections = github_maps.build_collections(
+            github_maps.load_export_frame(engine),
+            raw_parcels,
+            CATEGORY_STYLES,
+            PARCELS_STYLE[1],
+        )
+        github_maps.write_collections(collections, args.github_map_dir)
+        github_maps.update_readme_blocks(args.readme, collections, README_MAP_BLOCKS)
     return 0
 
 
